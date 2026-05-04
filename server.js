@@ -1571,7 +1571,11 @@ ${body}
     });
 
     app.listen(PORT, () => {
-        console.log(`[web] Biblioteca Orden Nacional escuchando en http://localhost:${PORT}`);
+        // PUBLIC_URL apunta al host real al que se accede desde afuera del
+        // contenedor (publicado en el docker-compose). Si no está seteado,
+        // mostramos el puerto interno como fallback (caso dev sin docker).
+        const publicUrl = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
+        console.log(`[web] Biblioteca Orden Nacional escuchando en ${publicUrl}`);
     });
 }
 

@@ -52,6 +52,9 @@ services:
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       ADMIN_SECRET: ${ADMIN_SECRET:-change-me-in-prod-please}
+      # URL pública por la que se accede al sitio (usada solo para el log de
+      # arranque). Apunta al puerto publicado por docker-compose en el host.
+      PUBLIC_URL: http://localhost:4280
     ports:
       - "4280:3000"
     volumes:

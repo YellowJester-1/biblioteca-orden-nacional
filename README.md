@@ -26,10 +26,10 @@ docker compose up --build
 La primera vez tarda un poco: descarga las imágenes, inicializa MySQL y carga el esquema de `db/init.sql`. Cuando en la consola aparezca:
 
 ```
-[web] Biblioteca Orden Nacional escuchando en http://localhost:3000
+[web] Biblioteca Orden Nacional escuchando en http://localhost:4280
 ```
 
-el sitio está disponible en **http://localhost:4280** (el puerto 3000 del contenedor se publica en el 4280 del host).
+el sitio está disponible en **http://localhost:4280**. Internamente el contenedor escucha en el puerto 3000 y `docker-compose` lo publica en el 4280 del host.
 
 Para detenerlo:
 
@@ -153,7 +153,3 @@ El servidor de este sitio no aloja libros. La Biblioteca Orden Nacional funciona
 ### Criterio de los títulos
 
 Cuando una obra cuenta con traducción establecida al español, su título se registra en español. Si no existe una traducción establecida, el título se conserva en su idioma de origen.
-
-## Licencia
-
-Sin licencia especificada todavía. Si vas a publicar el repo en abierto, agregá un archivo `LICENSE` antes de difundirlo.
