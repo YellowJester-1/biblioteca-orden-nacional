@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin · Biblioteca Orden Nacional</title>
+    <script src="/theme.js"></script>
+    <script src="/disclaimer.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="admin-page">
+
+    <!-- ============================================================ -->
+    <!-- LOGIN -->
+    <!-- ============================================================ -->
+    <section class="admin-login" id="loginView" hidden>
+        <div class="overline">acceso restringido</div>
+        <h1 class="admin-login-title">Orden Nacional<span class="dot">.</span></h1>
+        <p class="admin-login-sub">Panel de administración</p>
+
+        <form class="admin-login-form" id="loginForm" novalidate autocomplete="off">
+            <label class="admin-field">
+                <span>Usuario</span>
+                <input type="text" id="loginUser" name="user" required autocomplete="username">
+            </label>
+            <label class="admin-field">
+                <span>Contraseña</span>
+                <input type="password" id="loginPass" name="password" required autocomplete="current-password">
+            </label>
+            <button type="submit" class="admin-submit" id="loginSubmit">Ingresar</button>
+            <div class="admin-error" id="loginError" hidden></div>
+        </form>
+
+        <a class="admin-back" href="/">← Volver al catálogo público</a>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- PANEL -->
+    <!-- ============================================================ -->
+    <section class="admin-panel" id="panelView" hidden>
+        <header class="admin-header">
+            <div>
+                <div class="overline">panel</div>
+                <h1>Orden Nacional<span class="dot">.</span></h1>
+                <div class="sub">Administración</div>
+            </div>
+            <div class="admin-header-right">
+                <span class="admin-user" id="adminUser">—</span>
+                <button type="button" class="admin-logout" id="logoutBtn">Cerrar sesión</button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="admin-tabs" role="tablist">
+            <button type="button" class="admin-tab active" data-tab="books" role="tab">
+                <span>Libros</span>
+                <span class="admin-tab-count" id="booksTabCount">0</span>
+            </button>
+            <button type="button" class="admin-tab" data-tab="contribs" role="tab">
+                <span>Aportes nuevos</span>
+                <span class="admin-tab-count admin-tab-count-alert" id="contribsTabCount" hidden>0</span>
+            </button>
+            <button type="button" class="admin-tab" data-tab="contribsExisting" role="tab">
+                <span>Aportes a existentes</span>
+                <span class="admin-tab-count admin-tab-count-alert" id="contribsExistingTabCount" hidden>0</span>
+            </button>
+            <button type="button" class="admin-tab" data-tab="reports" role="tab">
+                <span>Reportes</span>
+                <span class="admin-tab-count admin-tab-count-alert" id="reportsTabCount" hidden>0</span>
+            </button>
+        </nav>
+
+        <!-- ============================================================ -->
+        <!-- TAB: LIBROS -->
+        <!-- ============================================================ -->
+        <div class="admin-tabpanel" id="tabBooks">
+            <div class="admin-toolbar">
+                <input type="text" id="adminSearch" class="admin-search"
+                       placeholder="Filtrar por título, autor o sección…" autocomplete="off">
+                <div class="admin-toolbar-actions">
+                    <button type="button" class="admin-action-btn" id="openCreateBookBtn">
+                        <span class="admin-action-btn-icon">+</span>
+                        <span>Nuevo libro</span>
+                    </button>
+                    <a href="/" class="admin-link">Vista pública →</a>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table" id="booksTable">
+                    <thead>
+                        <tr>
+                            <th class="col-id">ID</th>
+                            <th class="col-title">Título</th>
+                            <th class="col-author">Autor</th>
+                            <th class="col-section">Sección</th>
+                            <th class="col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="booksTbody"></tbody>
+                </table>
+            </div>
+
+            <div class="status-msg" id="adminStatus">Cargando libros…</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- TAB: APORTES -->
+        <!-- ============================================================ -->
+        <div class="admin-tabpanel" id="tabContribs" hidden>
+            <div class="admin-toolbar">
+                <div class="contrib-filters" id="contribFilters">
+                    <button type="button" class="contrib-filter active" data-status="pending">
+                        Pendientes <span class="contrib-filter-count" id="cfPending">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="accepted">
+                        Aceptados <span class="contrib-filter-count" id="cfAccepted">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="rejected">
+                        Rechazados <span class="contrib-filter-count" id="cfRejected">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="all">
+                        Todos
+                    </button>
+                </div>
+                <button type="button" class="admin-link admin-link-btn" id="contribReloadBtn">↻ Recargar</button>
+            </div>
+
+            <div class="contrib-list" id="contribList"></div>
+            <div class="status-msg" id="contribStatus">Cargando aportes…</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- TAB: APORTES SOBRE LIBROS EXISTENTES -->
+        <!-- ============================================================ -->
+        <div class="admin-tabpanel" id="tabContribsExisting" hidden>
+            <p class="admin-tab-help">
+                Aportes vinculados a un título ya catalogado: nuevas ediciones o
+                traducciones que se incorporan al registro existente, y observaciones
+                o correcciones enviadas por los lectores.
+            </p>
+            <div class="admin-toolbar">
+                <div class="contrib-filters" id="contribExistingFilters">
+                    <button type="button" class="contrib-filter active" data-status="pending">
+                        Pendientes <span class="contrib-filter-count" id="cefPending">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="accepted">
+                        Aceptados <span class="contrib-filter-count" id="cefAccepted">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="rejected">
+                        Rechazados <span class="contrib-filter-count" id="cefRejected">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="all">
+                        Todos
+                    </button>
+                </div>
+                <button type="button" class="admin-link admin-link-btn" id="contribExistingReloadBtn">↻ Recargar</button>
+            </div>
+
+            <div class="contrib-list" id="contribExistingList"></div>
+            <div class="status-msg" id="contribExistingStatus">Cargando aportes…</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- TAB: REPORTES (links caídos) -->
+        <!-- ============================================================ -->
+        <div class="admin-tabpanel" id="tabReports" hidden>
+            <div class="admin-toolbar">
+                <div class="contrib-filters" id="reportFilters">
+                    <button type="button" class="contrib-filter active" data-status="pending">
+                        Pendientes <span class="contrib-filter-count" id="rfPending">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="resolved">
+                        Resueltos <span class="contrib-filter-count" id="rfResolved">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="dismissed">
+                        Descartados <span class="contrib-filter-count" id="rfDismissed">0</span>
+                    </button>
+                    <button type="button" class="contrib-filter" data-status="all">
+                        Todos
+                    </button>
+                </div>
+                <button type="button" class="admin-link admin-link-btn" id="reportReloadBtn">↻ Recargar</button>
+            </div>
+
+            <div class="contrib-list" id="reportList"></div>
+            <div class="status-msg" id="reportStatus">Cargando reportes…</div>
+        </div>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- Modal: nuevo libro (alta directa) -->
+    <!-- ============================================================ -->
+    <div class="modal" id="adminCreateBookModal" hidden>
+        <div class="modal-backdrop" data-close></div>
+        <div class="modal-card modal-card-wide" role="dialog" aria-labelledby="adminCreateBookTitle" aria-modal="true">
+            <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+            <div class="modal-overline" id="adminCreateBookOverline">alta directa</div>
+            <h2 class="modal-title" id="adminCreateBookTitle">Nuevo libro</h2>
+            <p class="modal-help" id="adminCreateBookHelp">
+                Cargá un título directamente en el catálogo público — no pasa por la cola de aportes.
+                Los campos marcados como <em>opcional</em> podés dejarlos vacíos.
+            </p>
+
+            <form id="adminCreateBookForm" novalidate>
+                <div class="form-grid">
+                    <label class="form-field form-field-full form-field-cover">
+                        <span class="form-label">Portada <em>(opcional)</em></span>
+                        <input type="file" id="aTagPortada" name="cover" accept="image/*">
+                        <div class="cover-preview" id="aCoverPreview" hidden>
+                            <img class="cover-preview-img" id="aCoverPreviewImg" alt="">
+                            <span class="cover-preview-label" id="aCoverPreviewLabel">vista previa</span>
+                            <button type="button" class="cover-preview-remove" id="aCoverRemoveBtn" hidden>
+                                Quitar portada
+                            </button>
+                        </div>
+                        <input type="hidden" id="aCoverClear" name="cover_clear" value="">
+                        <span class="form-hint">
+                            <strong>Tamaño ideal: 800 × 1200 px</strong> (proporción 2:3, vertical) ·
+                            jpg, png o webp · máx. 5 MB.
+                        </span>
+                    </label>
+
+                    <label class="form-field">
+                        <span class="form-label">Título <em class="req">*</em></span>
+                        <input type="text" id="aTagTitulo" name="title" required maxlength="200"
+                               placeholder="Ej: Tempestades de acero">
+                    </label>
+
+                    <label class="form-field">
+                        <span class="form-label">Autor <em class="req">*</em></span>
+                        <input type="text" id="aTagAutor" name="author" required maxlength="150"
+                               placeholder="Ej: Ernst Jünger">
+                    </label>
+
+                    <label class="form-field" id="aTagSeccionField">
+                        <span class="form-label">Sección <em class="req">*</em></span>
+                        <select id="aTagSeccion" name="section" required>
+                            <option value="" disabled selected>— Elegir —</option>
+                            <option value="A">Narrativa extensa</option>
+                            <option value="B">Relato breve</option>
+                            <option value="C">Poesía</option>
+                            <option value="D">Ensayo y pensamiento</option>
+                            <option value="E">Historia y no ficción</option>
+                            <option value="F">Teatro</option>
+                        </select>
+                        <span class="form-hint">Determina dónde aparece en el catálogo público.</span>
+                    </label>
+
+                    <label class="form-field">
+                        <span class="form-label">Año <em>(opcional)</em></span>
+                        <input type="text" id="aTagAnio" name="year" maxlength="20" inputmode="numeric"
+                               placeholder="Ej: 1920">
+                    </label>
+
+                    <div class="form-field form-field-full">
+                        <span class="form-label">Idioma del libro <em>(opcional)</em></span>
+                        <div class="tag-group" id="aTagLangsBook" data-target="aInputLangsBook"></div>
+                        <input type="hidden" id="aInputLangsBook" name="languages_book" value="">
+                        <span class="form-hint">Elegí uno o más — pdf / epub</span>
+                        <div class="lang-link-list" id="aLangLinksBook"></div>
+                    </div>
+
+                    <div class="form-field form-field-full">
+                        <span class="form-label">Idioma del audiolibro <em>(opcional)</em></span>
+                        <div class="tag-group" id="aTagLangsAudio" data-target="aInputLangsAudio"></div>
+                        <input type="hidden" id="aInputLangsAudio" name="languages_audio" value="">
+                        <span class="form-hint">Si hay audiolibro disponible, en qué idiomas</span>
+                        <div class="lang-link-list" id="aLangLinksAudio"></div>
+                    </div>
+
+                    <label class="form-field form-field-full">
+                        <span class="form-label">Fragmento <em>(opcional)</em></span>
+                        <textarea id="aTagFragmento" name="fragment" rows="5" maxlength="6000"
+                                  placeholder="Pegá un fragmento representativo del libro…"></textarea>
+                        <span class="form-hint">Máx. 6000 caracteres</span>
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn modal-btn-muted" data-close>Cancelar</button>
+                    <button type="submit" class="modal-btn modal-btn-primary" id="adminCreateBookSubmit">
+                        Publicar libro
+                    </button>
+                </div>
+                <div class="modal-status" id="adminCreateBookStatus" hidden></div>
+            </form>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    // ----- Refs -----
+    const loginView   = document.getElementById('loginView');
+    const panelView   = document.getElementById('panelView');
+    const loginForm   = document.getElementById('loginForm');
+    const loginUser   = document.getElementById('loginUser');
+    const loginPass   = document.getElementById('loginPass');
+    const loginSubmit = document.getElementById('loginSubmit');
+    const loginError  = document.getElementById('loginError');
+    const logoutBtn   = document.getElementById('logoutBtn');
+    const adminUserEl = document.getElementById('adminUser');
+
+    const tabBtns       = document.querySelectorAll('.admin-tab');
+    const tabBooks      = document.getElementById('tabBooks');
+    const tabContribs   = document.getElementById('tabContribs');
+    const booksTabCount = document.getElementById('booksTabCount');
+    const contribsTabCount = document.getElementById('contribsTabCount');
+
+    // libros
+    const tbodyEl     = document.getElementById('booksTbody');
+    const statusEl    = document.getElementById('adminStatus');
+    const searchInput = document.getElementById('adminSearch');
+
+    // aportes (libros nuevos)
+    const contribListEl   = document.getElementById('contribList');
+    const contribStatusEl = document.getElementById('contribStatus');
+    const contribFilters  = document.getElementById('contribFilters');
+    const contribReload   = document.getElementById('contribReloadBtn');
+    const cfPending  = document.getElementById('cfPending');
+    const cfAccepted = document.getElementById('cfAccepted');
+    const cfRejected = document.getElementById('cfRejected');
+
+    // aportes a libros existentes
+    const tabContribsExisting        = document.getElementById('tabContribsExisting');
+    const contribsExistingTabCount   = document.getElementById('contribsExistingTabCount');
+    const contribExistingListEl      = document.getElementById('contribExistingList');
+    const contribExistingStatusEl    = document.getElementById('contribExistingStatus');
+    const contribExistingFilters     = document.getElementById('contribExistingFilters');
+    const contribExistingReload      = document.getElementById('contribExistingReloadBtn');
+    const cefPending  = document.getElementById('cefPending');
+    const cefAccepted = document.getElementById('cefAccepted');
+    const cefRejected = document.getElementById('cefRejected');
+
+    // reportes
+    const tabReports        = document.getElementById('tabReports');
+    const reportsTabCount   = document.getElementById('reportsTabCount');
+    const reportListEl      = document.getElementById('reportList');
+    const reportStatusEl    = document.getElementById('reportStatus');
+    const reportFilters     = document.getElementById('reportFilters');
+    const reportReload      = document.getElementById('reportReloadBtn');
+    const rfPending    = document.getElementById('rfPending');
+    const rfResolved   = document.getElementById('rfResolved');
+    const rfDismissed  = document.getElementById('rfDismissed');
+
+    let allBooks = [];
+    let allContribs = [];
+    let allContribsExisting = [];
+    let allReports = [];
+    let activeStatus = 'pending';
+    let activeStatusExisting = 'pending';
+    let activeReportStatus = 'pending';
+    let LANG_NAMES = {}; // slug -> nombre
+
+    async function loadLanguageNames() {
+        if (Object.keys(LANG_NAMES).length) return;
+        try {
+            const res = await fetch('/api/languages');
+            if (!res.ok) return;
+            const langs = await res.json();
+            langs.forEach(l => { LANG_NAMES[l.slug] = l.name; });
+        } catch (_) { /* ignoramos, mostramos slugs */ }
+    }
+    // Capitaliza la primera letra
+    const cap = (s) => {
+        if (!s) return s;
+        return s.charAt(0).toLocaleUpperCase('es') + s.slice(1);
+    };
+
+    // Mapa: letra de sección -> nombre legible
+    const SECTION_NAMES = {
+        A: 'Narrativa extensa',
+        B: 'Relato breve',
+        C: 'Poesía',
+        D: 'Ensayo y pensamiento',
+        E: 'Historia y no ficción',
+        F: 'Teatro'
+    };
+
+    // Mapa: slug legacy de categoría -> letra de sección. Útil para mostrar
+    // la sección de aportes que aún tienen guardado category_slug pero no
+    // section explícita.
+    const CATEGORY_TO_SECTION = {
+        novela:   'A',
+        cuento:   'B',
+        poesia:   'C',
+        ensayo:   'D',
+        historia: 'E',
+        teatro:   'F'
+    };
+
+    function renderLangPills(csv) {
+        if (!csv) return '<span class="contrib-empty">—</span>';
+        return csv.split(',')
+            .map(s => s.trim()).filter(Boolean)
+            .map(s => `<span class="lang-pill">${escapeHtml(cap(LANG_NAMES[s] || s))}</span>`)
+            .join('');
+    }
+
+    // Algunos drivers MySQL devuelven JSON como objeto, otros como string.
+    // Normalizamos a un mapa plano {slug: url}.
+    function normalizeLinksMap(raw) {
+        if (!raw) return {};
+        if (typeof raw === 'string') {
+            try { raw = JSON.parse(raw); } catch (_) { return {}; }
+        }
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+        const out = {};
+        Object.keys(raw).forEach(k => {
+            const slug = String(k || '').trim().toLowerCase();
+            const url  = String(raw[k] || '').trim();
+            if (slug && url) out[slug] = url;
+        });
+        return out;
+    }
+
+    // Devuelve HTML con un <a> por cada idioma del mapa.
+    function renderLangLinks(map) {
+        const slugs = Object.keys(map);
+        if (slugs.length === 0) return '';
+        return slugs.map(slug => {
+            const label = cap(LANG_NAMES[slug] || slug);
+            return `<a href="${escapeHtml(map[slug])}"
+                       target="_blank" rel="noopener">${escapeHtml(label)}&nbsp;↗</a>`;
+        }).join(' · ');
+    }
+
+    // ----- Helpers -----
+    const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    function fmtDate(s) {
+        if (!s) return '—';
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString('es', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    function setStatus(el, msg, isError = false) {
+        if (!msg) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        el.textContent = msg;
+        el.classList.toggle('error', isError);
+    }
+
+    function showLogin() {
+        loginView.hidden = false;
+        panelView.hidden = true;
+        setTimeout(() => loginUser.focus(), 50);
+    }
+    function showPanel(user) {
+        loginView.hidden = true;
+        panelView.hidden = false;
+        adminUserEl.textContent = user || '—';
+    }
+
+    // ----- Sesión -----
+    async function checkSession() {
+        try {
+            const res = await fetch('/api/admin/me', { credentials: 'same-origin' });
+            if (!res.ok) { showLogin(); return; }
+            const data = await res.json();
+            if (data && data.authenticated) {
+                showPanel(data.user);
+                await Promise.all([loadBooks(), refreshPendingBadge(), refreshReportsBadge(), loadLanguageNames()]);
+            } else {
+                showLogin();
+            }
+        } catch (_) {
+            showLogin();
+        }
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.hidden = true;
+        loginError.textContent = '';
+        loginSubmit.disabled = true;
+        loginSubmit.textContent = 'Verificando…';
+
+        try {
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    user: loginUser.value,
+                    password: loginPass.value
+                })
+            });
+            if (res.status === 401) {
+                loginError.textContent = 'Usuario o contraseña incorrectos.';
+                loginError.hidden = false;
+                return;
+            }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            const data = await res.json();
+            loginPass.value = '';
+            showPanel(data.user);
+            await Promise.all([loadBooks(), refreshPendingBadge(), refreshReportsBadge(), loadLanguageNames()]);
+        } catch (err) {
+            console.error(err);
+            loginError.textContent = 'No se pudo conectar al servidor.';
+            loginError.hidden = false;
+        } finally {
+            loginSubmit.disabled = false;
+            loginSubmit.textContent = 'Ingresar';
+        }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch (_) { /* ignoramos */ }
+        allBooks = [];
+        allContribs = [];
+        allContribsExisting = [];
+        allReports = [];
+        tbodyEl.innerHTML = '';
+        contribListEl.innerHTML = '';
+        contribExistingListEl.innerHTML = '';
+        reportListEl.innerHTML = '';
+        booksTabCount.textContent = '0';
+        contribsTabCount.hidden = true;
+        contribsExistingTabCount.hidden = true;
+        reportsTabCount.hidden = true;
+        showLogin();
+    });
+
+    // ----- Tabs -----
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const which = btn.dataset.tab;
+            tabBooks.hidden            = which !== 'books';
+            tabContribs.hidden         = which !== 'contribs';
+            tabContribsExisting.hidden = which !== 'contribsExisting';
+            tabReports.hidden          = which !== 'reports';
+            if (which === 'contribs' && allContribs.length === 0) {
+                loadContribs(activeStatus);
+            }
+            if (which === 'contribsExisting' && allContribsExisting.length === 0) {
+                loadContribsExisting(activeStatusExisting);
+            }
+            if (which === 'reports' && allReports.length === 0) {
+                loadReports(activeReportStatus);
+            }
+        });
+    });
+
+    // ----- LIBROS -----
+    async function loadBooks() {
+        setStatus(statusEl, 'Cargando libros…');
+        try {
+            const res = await fetch('/api/admin/books', { credentials: 'same-origin' });
+            if (res.status === 401) { showLogin(); return; }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            allBooks = await res.json();
+            booksTabCount.textContent = String(allBooks.length);
+            renderBooksTable();
+            setStatus(statusEl, null);
+        } catch (err) {
+            console.error(err);
+            setStatus(statusEl, 'No se pudo cargar el listado.', true);
+        }
+    }
+
+    function renderBooksTable() {
+        const q = (searchInput.value || '').trim().toLowerCase();
+        const list = !q ? allBooks : allBooks.filter(b =>
+            b.title.toLowerCase().includes(q) ||
+            b.author.toLowerCase().includes(q) ||
+            (b.section || '').toLowerCase() === q ||
+            (SECTION_NAMES[b.section] || '').toLowerCase().includes(q)
+        );
+
+        if (list.length === 0) {
+            tbodyEl.innerHTML = '';
+            setStatus(statusEl, 'Sin resultados');
+            return;
+        }
+        setStatus(statusEl, null);
+
+        tbodyEl.innerHTML = list.map(b => `
+            <tr>
+                <td class="col-id">${String(b.id).padStart(4, '0')}</td>
+                <td class="col-title">
+                    <a href="/book.html?id=${b.id}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>
+                </td>
+                <td class="col-author">${escapeHtml(b.author)}</td>
+                <td class="col-section">${escapeHtml(SECTION_NAMES[b.section] || b.section || '')}</td>
+                <td class="col-actions">
+                    <button type="button" class="admin-row-btn" data-action="edit-book" data-id="${b.id}">Editar</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    searchInput.addEventListener('input', renderBooksTable);
+
+    // Click en "Editar" de la tabla de libros: traer el libro completo y abrir modal.
+    tbodyEl.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action="edit-book"]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!id) return;
+        btn.disabled = true;
+        btn.textContent = 'Abriendo…';
+        try {
+            const res = await fetch(`/api/books/${id}`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const book = await res.json();
+            await window.adminBookModal.openEditBook(book);
+        } catch (err) {
+            console.error(err);
+            alert('No se pudo cargar el libro para editar.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Editar';
+        }
+    });
+
+    // ----- APORTES -----
+    // Refresca los dos badges (aportes nuevos vs aportes a libros existentes)
+    // a partir del contador desagregado del backend.
+    async function refreshPendingBadge() {
+        try {
+            const res = await fetch('/api/admin/contributions/count', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const setBadge = (el, n) => {
+                if (n > 0) { el.hidden = false; el.textContent = String(n); }
+                else       { el.hidden = true; }
+            };
+            setBadge(contribsTabCount,         Number(data.pending_new      || 0));
+            setBadge(contribsExistingTabCount, Number(data.pending_existing || 0));
+        } catch (_) { /* silencioso */ }
+    }
+
+    async function refreshReportsBadge() {
+        try {
+            const res = await fetch('/api/admin/reports/count', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const n = Number(data.pending || 0);
+            if (n > 0) {
+                reportsTabCount.hidden = false;
+                reportsTabCount.textContent = String(n);
+            } else {
+                reportsTabCount.hidden = true;
+            }
+        } catch (_) { /* silencioso */ }
+    }
+
+    // Helper común: pide la lista al backend, renderiza y actualiza
+    // los contadores del filtro local de la solapa correspondiente.
+    async function loadContribsScope({
+        scope,           // 'new' | 'existing'
+        status,
+        listEl, statusEl, filtersEl,
+        cPending, cAccepted, cRejected
+    }) {
+        filtersEl.querySelectorAll('.contrib-filter').forEach(b => {
+            b.classList.toggle('active', b.dataset.status === status);
+        });
+        setStatus(statusEl, 'Cargando aportes…');
+
+        try {
+            await loadLanguageNames();
+            const url = `/api/admin/contributions?status=${encodeURIComponent(status)}&parent=${scope}`;
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (res.status === 401) { showLogin(); return null; }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const rows = await res.json();
+
+            renderContribList(rows, listEl, statusEl);
+            setStatus(statusEl, null);
+
+            // Recalcular contadores del filtro local
+            if (status === 'all') {
+                let p = 0, a = 0, r = 0;
+                rows.forEach(c => {
+                    if (c.status === 'pending')  p++;
+                    if (c.status === 'accepted') a++;
+                    if (c.status === 'rejected') r++;
+                });
+                cPending.textContent  = String(p);
+                cAccepted.textContent = String(a);
+                cRejected.textContent = String(r);
+            } else if (status === 'pending')  cPending.textContent  = String(rows.length);
+            else if (status === 'accepted') cAccepted.textContent = String(rows.length);
+            else if (status === 'rejected') cRejected.textContent = String(rows.length);
+
+            return rows;
+        } catch (err) {
+            console.error(err);
+            setStatus(statusEl, 'No se pudo cargar la cola.', true);
+            return null;
+        }
+    }
+
+    async function loadContribs(status = 'pending') {
+        activeStatus = status;
+        const rows = await loadContribsScope({
+            scope: 'new', status,
+            listEl: contribListEl, statusEl: contribStatusEl,
+            filtersEl: contribFilters,
+            cPending: cfPending, cAccepted: cfAccepted, cRejected: cfRejected
+        });
+        if (rows) allContribs = rows;
+    }
+
+    async function loadContribsExisting(status = 'pending') {
+        activeStatusExisting = status;
+        const rows = await loadContribsScope({
+            scope: 'existing', status,
+            listEl: contribExistingListEl, statusEl: contribExistingStatusEl,
+            filtersEl: contribExistingFilters,
+            cPending: cefPending, cAccepted: cefAccepted, cRejected: cefRejected
+        });
+        if (rows) allContribsExisting = rows;
+    }
+
+    const STATUS_LABELS = {
+        pending:  'Pendiente',
+        accepted: 'Aceptado',
+        rejected: 'Rechazado'
+    };
+
+    // Renderiza una lista de contribuciones en el contenedor pasado.
+    // Usado tanto por la solapa "Aportes nuevos" como "Aportes a existentes".
+    function renderContribList(rows, listEl, statusEl) {
+        if (!rows.length) {
+            listEl.innerHTML = '';
+            setStatus(statusEl, 'No hay aportes en este filtro.');
+            return;
+        }
+        setStatus(statusEl, null);
+        listEl.innerHTML = rows.map(contribCardHtml).join('');
+    }
+
+    // Wrappers usados por los handlers de filtros / acciones (que reciclan
+    // estado global por solapa).
+    function renderContribs() {
+        renderContribList(allContribs, contribListEl, contribStatusEl);
+    }
+    function renderContribsExisting() {
+        renderContribList(allContribsExisting, contribExistingListEl, contribExistingStatusEl);
+    }
+
+    // HTML de una card. Función pura: recibe un objeto contribution y
+    // devuelve string. La card decide su forma según parent_book_id.
+    function contribCardHtml(c) {
+            const isPending = c.status === 'pending';
+            const statusBadge = `<span class="contrib-status contrib-status-${c.status}">${STATUS_LABELS[c.status] || c.status}</span>`;
+            const cover = c.cover_path
+                ? `<img class="contrib-cover" src="${escapeHtml(c.cover_path)}" alt="Portada de ${escapeHtml(c.title)}" loading="lazy">`
+                : `<div class="contrib-cover contrib-cover-empty">Sin<br>portada</div>`;
+
+            const linksBookMap = normalizeLinksMap(c.links_book);
+            let bookLinksHtml = renderLangLinks(linksBookMap);
+            if (!bookLinksHtml) {
+                const legacy = [];
+                if (c.link_pdf)  legacy.push(`<a href="${escapeHtml(c.link_pdf)}"  target="_blank" rel="noopener">PDF ↗</a>`);
+                if (c.link_epub) legacy.push(`<a href="${escapeHtml(c.link_epub)}" target="_blank" rel="noopener">EPUB ↗</a>`);
+                bookLinksHtml = legacy.join(' · ');
+            }
+            const linksAudioMap = normalizeLinksMap(c.links_audio);
+            let audioLinksHtml = renderLangLinks(linksAudioMap);
+            if (!audioLinksHtml && c.link_audio) {
+                audioLinksHtml = `<a href="${escapeHtml(c.link_audio)}" target="_blank" rel="noopener">Audio ↗</a>`;
+            }
+            const bookLinksRow = bookLinksHtml
+                ? `<div class="contrib-row"><span class="contrib-label">enlaces libro</span><div class="contrib-links">${bookLinksHtml}</div></div>`
+                : '';
+            const audioLinksRow = audioLinksHtml
+                ? `<div class="contrib-row"><span class="contrib-label">enlaces audio</span><div class="contrib-links">${audioLinksHtml}</div></div>`
+                : '';
+            const linksHtml = bookLinksRow + audioLinksRow;
+
+            const fragHtml = c.fragment
+                ? `<details class="contrib-details"><summary>Fragmento</summary><div class="contrib-frag">${escapeHtml(c.fragment)}</div></details>`
+                : '';
+            const notesHtml = c.notes
+                ? `<details class="contrib-details"><summary>Notas del aportante</summary><div class="contrib-frag">${escapeHtml(c.notes)}</div></details>`
+                : '';
+
+            // ¿Es un aporte tipo "observación" sobre un libro existente?
+            // (parent_book_id pero sin idiomas/links que mergear). En ese caso,
+            // accept() es un no-op sobre el libro padre y sólo cierra el ítem.
+            const isNoteOnly = c.parent_book_id
+                && !c.languages_book && !c.languages_audio
+                && Object.keys(linksBookMap).length === 0
+                && Object.keys(linksAudioMap).length === 0;
+
+            // Banner: este aporte está ligado a un libro existente.
+            const parentBannerLabel = isNoteOnly
+                ? 'observación sobre libro existente:'
+                : 'aporte sobre libro existente:';
+            const parentBanner = c.parent_book_id
+                ? `<div class="contrib-parent">
+                       <span class="contrib-parent-label">${parentBannerLabel}</span>
+                       <a href="/book.html?id=${c.parent_book_id}" target="_blank" rel="noopener">
+                           ${escapeHtml(c.parent_book_title || ('libro #' + c.parent_book_id))}${
+                               c.parent_book_author ? ' · ' + escapeHtml(c.parent_book_author) : ''
+                           } ↗
+                       </a>
+                   </div>`
+                : '';
+
+            // Para aportes con parent_book_id, el modal de edición clásico no
+            // aplica (los datos los pone el libro padre). Sólo permitimos
+            // aceptar/atender o rechazar.
+            const editBtn = c.parent_book_id
+                ? ''
+                : `<button type="button" class="contrib-btn contrib-btn-edit" data-action="edit" data-id="${c.id}">Editar</button>`;
+
+            const acceptLabel = isNoteOnly ? 'Marcar atendido' : 'Aceptar';
+
+            const actions = isPending
+                ? `<div class="contrib-actions">
+                       <button type="button" class="contrib-btn contrib-btn-accept" data-action="accept" data-id="${c.id}">${acceptLabel}</button>
+                       ${editBtn}
+                       <button type="button" class="contrib-btn contrib-btn-reject" data-action="reject" data-id="${c.id}">Rechazar</button>
+                   </div>`
+                : (c.status === 'accepted' && c.book_id
+                    ? `<div class="contrib-actions"><a class="admin-link" href="/book.html?id=${c.book_id}" target="_blank" rel="noopener">Ver en biblioteca →</a></div>`
+                    : '');
+
+            return `
+                <article class="contrib-card" data-id="${c.id}">
+                    ${cover}
+                    <div class="contrib-body">
+                        <div class="contrib-head">
+                            <div>
+                                <div class="contrib-overline">Aporte #${String(c.id).padStart(4, '0')} · ${fmtDate(c.created_at)}</div>
+                                <h3 class="contrib-title">${escapeHtml(c.title)}</h3>
+                                <div class="contrib-author">${escapeHtml(c.author)}${c.year ? ` · ${escapeHtml(c.year)}` : ''}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        ${parentBanner}
+                        <div class="contrib-row">
+                            <span class="contrib-label">sección</span>
+                            <div>${escapeHtml(SECTION_NAMES[CATEGORY_TO_SECTION[c.category_slug]] || cap(c.category_name || c.category_slug || ''))}</div>
+                        </div>
+                        <div class="contrib-row">
+                            <span class="contrib-label">idioma libro</span>
+                            <div class="contrib-langs">${renderLangPills(c.languages_book)}</div>
+                        </div>
+                        <div class="contrib-row">
+                            <span class="contrib-label">idioma audio</span>
+                            <div class="contrib-langs">${renderLangPills(c.languages_audio)}</div>
+                        </div>
+                        ${linksHtml}
+                        ${fragHtml}
+                        ${notesHtml}
+                        ${actions}
+                    </div>
+                </article>
+            `;
+    }
+
+    // Filtros + reload de la solapa "Aportes nuevos"
+    contribFilters.addEventListener('click', (e) => {
+        const btn = e.target.closest('.contrib-filter');
+        if (!btn) return;
+        loadContribs(btn.dataset.status);
+    });
+    contribReload.addEventListener('click', () => {
+        loadContribs(activeStatus);
+        refreshPendingBadge();
+    });
+
+    // Filtros + reload de la solapa "Aportes a existentes"
+    contribExistingFilters.addEventListener('click', (e) => {
+        const btn = e.target.closest('.contrib-filter');
+        if (!btn) return;
+        loadContribsExisting(btn.dataset.status);
+    });
+    contribExistingReload.addEventListener('click', () => {
+        loadContribsExisting(activeStatusExisting);
+        refreshPendingBadge();
+    });
+
+    // Handler genérico de acciones (accept / edit / reject) sobre cards.
+    // Recibe la lista en uso y la función para recargar la solapa.
+    function attachContribActions(listEl, getList, reload) {
+        listEl.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id     = btn.dataset.id;
+            const action = btn.dataset.action;
+            if (!id || !action) return;
+
+            const list = getList();
+
+            // Editar abre el modal con los datos del aporte; no toca el backend.
+            if (action === 'edit') {
+                const contrib = list.find(x => String(x.id) === String(id));
+                if (!contrib) return;
+                await window.adminBookModal.openEditContrib(contrib);
+                return;
+            }
+
+            // Confirmación rápida para rechazar
+            if (action === 'reject' && !confirm('¿Rechazar este aporte? Quedará registrado como rechazado.')) {
+                return;
+            }
+
+            // Deshabilitamos los botones de la card mientras esperamos
+            const card = btn.closest('.contrib-card');
+            const btns = card ? card.querySelectorAll('button[data-action]') : [btn];
+            btns.forEach(b => b.disabled = true);
+            const originalLabel = btn.textContent;
+            btn.textContent = action === 'accept' ? 'Procesando…' : 'Rechazando…';
+
+            try {
+                const res = await fetch(`/api/admin/contributions/${id}/${action}`, {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                if (res.status === 401) { showLogin(); return; }
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.error || 'No se pudo procesar la acción.');
+                    btns.forEach(b => b.disabled = false);
+                    btn.textContent = originalLabel;
+                    return;
+                }
+
+                await reload();
+                await refreshPendingBadge();
+                // Si acabamos de aceptar y mergea/crea libro, recargamos la tabla
+                if (action === 'accept') {
+                    await loadBooks();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error de red.');
+                btns.forEach(b => b.disabled = false);
+                btn.textContent = originalLabel;
+            }
+        });
+    }
+
+    attachContribActions(
+        contribListEl,
+        () => allContribs,
+        () => loadContribs(activeStatus)
+    );
+    attachContribActions(
+        contribExistingListEl,
+        () => allContribsExisting,
+        () => loadContribsExisting(activeStatusExisting)
+    );
+
+    // -------------------------------------------------------------------------
+    // ----- REPORTES -----
+    // -------------------------------------------------------------------------
+    const REPORT_STATUS_LABELS = {
+        pending:   'Pendiente',
+        resolved:  'Resuelto',
+        dismissed: 'Descartado'
+    };
+
+    async function loadReports(status = 'pending') {
+        activeReportStatus = status;
+        reportFilters.querySelectorAll('.contrib-filter').forEach(b => {
+            b.classList.toggle('active', b.dataset.status === status);
+        });
+
+        setStatus(reportStatusEl, 'Cargando reportes…');
+        try {
+            const res = await fetch(`/api/admin/reports?status=${encodeURIComponent(status)}`, {
+                credentials: 'same-origin'
+            });
+            if (res.status === 401) { showLogin(); return; }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            allReports = await res.json();
+            renderReports();
+            setStatus(reportStatusEl, null);
+
+            if (status === 'all') {
+                let p = 0, r = 0, d = 0;
+                allReports.forEach(rep => {
+                    if (rep.status === 'pending')   p++;
+                    if (rep.status === 'resolved')  r++;
+                    if (rep.status === 'dismissed') d++;
+                });
+                rfPending.textContent   = String(p);
+                rfResolved.textContent  = String(r);
+                rfDismissed.textContent = String(d);
+            } else if (status === 'pending') {
+                rfPending.textContent   = String(allReports.length);
+            } else if (status === 'resolved') {
+                rfResolved.textContent  = String(allReports.length);
+            } else if (status === 'dismissed') {
+                rfDismissed.textContent = String(allReports.length);
+            }
+        } catch (err) {
+            console.error(err);
+            setStatus(reportStatusEl, 'No se pudieron cargar los reportes.', true);
+        }
+    }
+
+    function renderReports() {
+        if (!allReports.length) {
+            reportListEl.innerHTML = '';
+            setStatus(reportStatusEl, 'No hay reportes en este filtro.');
+            return;
+        }
+        setStatus(reportStatusEl, null);
+
+        reportListEl.innerHTML = allReports.map(r => {
+            const isPending = r.status === 'pending';
+            const statusBadge = `<span class="contrib-status contrib-status-${r.status}">${REPORT_STATUS_LABELS[r.status] || r.status}</span>`;
+
+            const bookRow = r.book_id && r.book_title
+                ? `<div class="contrib-row">
+                       <span class="contrib-label">libro</span>
+                       <div>
+                           <a class="admin-link" href="/book.html?id=${r.book_id}" target="_blank" rel="noopener">
+                               ${escapeHtml(r.book_title)}${r.book_author ? ` — ${escapeHtml(r.book_author)}` : ''} ↗
+                           </a>
+                       </div>
+                   </div>`
+                : `<div class="contrib-row">
+                       <span class="contrib-label">libro</span>
+                       <div><span class="contrib-empty">— sin asociar —</span></div>
+                   </div>`;
+
+            const decidedRow = r.decided_at
+                ? `<div class="contrib-row"><span class="contrib-label">decidido</span><div>${fmtDate(r.decided_at)}</div></div>`
+                : '';
+
+            const actions = isPending
+                ? `<div class="contrib-actions">
+                       <button type="button" class="contrib-btn contrib-btn-accept" data-action="resolve" data-id="${r.id}">Marcar resuelto</button>
+                       <button type="button" class="contrib-btn contrib-btn-reject" data-action="dismiss" data-id="${r.id}">Descartar</button>
+                   </div>`
+                : '';
+
+            return `
+                <article class="contrib-card contrib-card-report" data-id="${r.id}">
+                    <div class="contrib-body">
+                        <div class="contrib-head">
+                            <div>
+                                <div class="contrib-overline">Reporte #${String(r.id).padStart(4, '0')} · ${fmtDate(r.created_at)}</div>
+                                <h3 class="contrib-title">Enlace caído</h3>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        ${bookRow}
+                        <div class="contrib-row">
+                            <span class="contrib-label">mensaje</span>
+                            <div class="contrib-frag">${escapeHtml(r.message)}</div>
+                        </div>
+                        ${decidedRow}
+                        ${actions}
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    reportFilters.addEventListener('click', (e) => {
+        const btn = e.target.closest('.contrib-filter');
+        if (!btn) return;
+        loadReports(btn.dataset.status);
+    });
+
+    reportReload.addEventListener('click', () => {
+        loadReports(activeReportStatus);
+        refreshReportsBadge();
+    });
+
+    reportListEl.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id     = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (!id || !action) return;
+
+        if (action === 'dismiss' && !confirm('¿Descartar este reporte? Quedará registrado como descartado.')) {
+            return;
+        }
+
+        const card = btn.closest('.contrib-card');
+        const btns = card ? card.querySelectorAll('button[data-action]') : [btn];
+        btns.forEach(b => b.disabled = true);
+        btn.textContent = action === 'resolve' ? 'Resolviendo…' : 'Descartando…';
+
+        try {
+            const res = await fetch(`/api/admin/reports/${id}/${action}`, {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            if (res.status === 401) { showLogin(); return; }
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'No se pudo procesar la acción.');
+                btns.forEach(b => b.disabled = false);
+                btn.textContent = action === 'resolve' ? 'Marcar resuelto' : 'Descartar';
+                return;
+            }
+
+            await loadReports(activeReportStatus);
+            await refreshReportsBadge();
+        } catch (err) {
+            console.error(err);
+            alert('Error de red.');
+            btns.forEach(b => b.disabled = false);
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // Modal: alta directa de un libro y edición de libros / aportes pendientes.
+    // Expone window.adminBookModal con openCreate / openEditBook / openEditContrib.
+    // -------------------------------------------------------------------------
+    (function setupBookModal() {
+        const modal      = document.getElementById('adminCreateBookModal');
+        const openBtn    = document.getElementById('openCreateBookBtn');
+        const form       = document.getElementById('adminCreateBookForm');
+        const submitBtn  = document.getElementById('adminCreateBookSubmit');
+        const statusEl   = document.getElementById('adminCreateBookStatus');
+        const overlineEl = document.getElementById('adminCreateBookOverline');
+        const titleEl    = document.getElementById('adminCreateBookTitle');
+        const helpEl     = document.getElementById('adminCreateBookHelp');
+        const titulo     = document.getElementById('aTagTitulo');
+        const autor      = document.getElementById('aTagAutor');
+        const seccion    = document.getElementById('aTagSeccion');
+        const seccionField = document.getElementById('aTagSeccionField');
+        const anio       = document.getElementById('aTagAnio');
+        const fragmento  = document.getElementById('aTagFragmento');
+        const langsBookEl  = document.getElementById('aTagLangsBook');
+        const langsAudioEl = document.getElementById('aTagLangsAudio');
+        const linksBookEl  = document.getElementById('aLangLinksBook');
+        const linksAudioEl = document.getElementById('aLangLinksAudio');
+        const coverInput        = document.getElementById('aTagPortada');
+        const coverPreview      = document.getElementById('aCoverPreview');
+        const coverPreviewImg   = document.getElementById('aCoverPreviewImg');
+        const coverPreviewLabel = document.getElementById('aCoverPreviewLabel');
+        const coverRemoveBtn    = document.getElementById('aCoverRemoveBtn');
+        const coverClearInput   = document.getElementById('aCoverClear');
+
+        if (!modal || !openBtn) return;
+
+        let lastFocus = null;
+        let languagesLoaded  = false;
+        let langNameMap = {};
+        const linkValues = { book: {}, audio: {} };
+        let coverPreviewUrl = null;
+
+        // Estado de la apertura actual: 'create' | 'edit-book' | 'edit-contrib'
+        let mode = 'create';
+        let editingId = null;
+
+        const MODE_TEXT = {
+            create:         { overline: 'alta directa', title: 'Nuevo libro',  submit: 'Publicar libro',
+                              help: 'Cargá un título directamente en el catálogo público — no pasa por la cola de aportes. Los campos marcados como <em>opcional</em> podés dejarlos vacíos.' },
+            'edit-book':    { overline: 'edición',       title: 'Editar libro', submit: 'Guardar cambios',
+                              help: 'Modificá los datos del libro publicado. Si subís una portada nueva, reemplaza la actual; si no, queda como está.' },
+            'edit-contrib': { overline: 'edición',       title: 'Editar aporte', submit: 'Guardar cambios',
+                              help: 'Modificá los datos del aporte antes de aceptarlo. La sección se decide al aceptar — no es necesaria acá.' }
+        };
+
+        async function ensureLanguagesLoaded() {
+            if (languagesLoaded) return;
+            try {
+                const res = await fetch('/api/languages');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const langs = await res.json();
+                applyLanguages(langs);
+                languagesLoaded = true;
+            } catch (err) {
+                console.error('no se pudieron cargar idiomas:', err);
+                const fallback = [{slug:'es',name:'español'}, {slug:'en',name:'inglés'}];
+                applyLanguages(fallback);
+                languagesLoaded = true;
+            }
+        }
+
+        function applyLanguages(langs) {
+            langNameMap = {};
+            langs.forEach(l => { langNameMap[l.slug] = l.name; });
+            renderTagGroup(langsBookEl,  langs);
+            renderTagGroup(langsAudioEl, langs);
+        }
+
+        function renderTagGroup(container, langs) {
+            container.innerHTML = langs.map(l => `
+                <button type="button" class="tag" data-slug="${escapeHtml(l.slug)}">
+                    ${escapeHtml(cap(l.name))}
+                </button>
+            `).join('');
+        }
+
+        function syncTagInput(group) {
+            const inputId = group.dataset.target;
+            const hidden  = document.getElementById(inputId);
+            if (!hidden) return;
+            const slugs = Array.from(group.querySelectorAll('.tag.active'))
+                .map(b => b.dataset.slug);
+            hidden.value = slugs.join(',');
+        }
+
+        // Re-renderiza la lista de inputs "Link de descarga en X" según los
+        // idiomas activos en el tag-group. kind = 'book' | 'audio'.
+        function renderLangLinks(kind) {
+            const group     = kind === 'audio' ? langsAudioEl : langsBookEl;
+            const container = kind === 'audio' ? linksAudioEl  : linksBookEl;
+            if (!group || !container) return;
+
+            container.querySelectorAll('input[data-slug]').forEach(inp => {
+                const slug = inp.dataset.slug;
+                if (slug) linkValues[kind][slug] = inp.value;
+            });
+
+            const slugs = Array.from(group.querySelectorAll('.tag.active'))
+                .map(b => b.dataset.slug);
+
+            if (slugs.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = slugs.map(slug => {
+                const langName = langNameMap[slug] || slug;
+                const stored   = linkValues[kind][slug] || '';
+                const id       = `aLink_${kind}_${slug}`;
+                return `
+                    <label class="lang-link-row">
+                        <span class="lang-link-label">
+                            Link de descarga en ${escapeHtml(langName)}
+                            <em>(opcional)</em>
+                        </span>
+                        <input type="url"
+                               id="${id}"
+                               data-slug="${escapeHtml(slug)}"
+                               value="${escapeHtml(stored)}"
+                               placeholder="https://…">
+                    </label>`;
+            }).join('');
+        }
+
+        function clearTagGroups() {
+            [langsBookEl, langsAudioEl].forEach(group => {
+                group.querySelectorAll('.tag.active').forEach(b => b.classList.remove('active'));
+                syncTagInput(group);
+            });
+            linkValues.book  = {};
+            linkValues.audio = {};
+            renderLangLinks('book');
+            renderLangLinks('audio');
+        }
+
+        [
+            { group: langsBookEl,  kind: 'book'  },
+            { group: langsAudioEl, kind: 'audio' }
+        ].forEach(({ group, kind }) => {
+            group.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tag');
+                if (!btn) return;
+                btn.classList.toggle('active');
+                syncTagInput(group);
+                renderLangLinks(kind);
+            });
+        });
+
+        // Preview de portada
+        if (coverInput) {
+            coverInput.addEventListener('change', () => {
+                if (coverPreviewUrl) {
+                    URL.revokeObjectURL(coverPreviewUrl);
+                    coverPreviewUrl = null;
+                }
+                const file = coverInput.files && coverInput.files[0];
+                if (!file || !file.type.startsWith('image/')) {
+                    coverPreviewImg.removeAttribute('src');
+                    coverPreview.hidden = true;
+                    if (coverRemoveBtn) coverRemoveBtn.hidden = true;
+                    return;
+                }
+                // Un archivo nuevo manda — descartamos cualquier "quitar" pendiente.
+                if (coverClearInput) coverClearInput.value = '';
+                coverPreviewUrl = URL.createObjectURL(file);
+                coverPreviewImg.src = coverPreviewUrl;
+                coverPreviewImg.alt = 'Vista previa de la portada';
+                if (coverPreviewLabel) coverPreviewLabel.textContent = 'vista previa';
+                coverPreview.hidden = false;
+                // En edit mode no tiene sentido "quitar la actual" cuando ya
+                // estás subiendo una nueva — escondemos el botón.
+                if (coverRemoveBtn) coverRemoveBtn.hidden = true;
+            });
+        }
+
+        function clearCoverPreview() {
+            if (coverPreviewUrl) {
+                URL.revokeObjectURL(coverPreviewUrl);
+                coverPreviewUrl = null;
+            }
+            if (coverPreviewImg) coverPreviewImg.removeAttribute('src');
+            if (coverPreview)    coverPreview.hidden = true;
+            if (coverRemoveBtn)  coverRemoveBtn.hidden = true;
+            if (coverPreviewLabel) coverPreviewLabel.textContent = 'vista previa';
+            if (coverClearInput) coverClearInput.value = '';
+        }
+
+        // Muestra una portada existente (URL del servidor) en el preview, sin usar
+        // objectURL. Habilita el botón "Quitar portada" para enviar cover_clear=1.
+        function showExistingCover(webPath) {
+            if (!webPath || !coverPreview) return;
+            if (coverPreviewUrl) {
+                URL.revokeObjectURL(coverPreviewUrl);
+                coverPreviewUrl = null;
+            }
+            coverPreviewImg.src = webPath;
+            coverPreviewImg.alt = 'Portada actual';
+            if (coverPreviewLabel) coverPreviewLabel.textContent = 'portada actual';
+            coverPreview.hidden = false;
+            if (coverRemoveBtn) coverRemoveBtn.hidden = false;
+            if (coverClearInput) coverClearInput.value = '';
+        }
+
+        if (coverRemoveBtn) {
+            coverRemoveBtn.addEventListener('click', () => {
+                if (coverInput) coverInput.value = '';
+                if (coverClearInput) coverClearInput.value = '1';
+                clearCoverPreview();
+            });
+        }
+
+        function applyMode(nextMode) {
+            mode = nextMode;
+            const t = MODE_TEXT[mode] || MODE_TEXT.create;
+            if (overlineEl) overlineEl.textContent = t.overline;
+            if (titleEl)    titleEl.textContent    = t.title;
+            if (helpEl)     helpEl.innerHTML       = t.help;
+            submitBtn.textContent = t.submit;
+
+            // En modo edit-contrib la sección no aplica (la decide el accept)
+            if (seccionField) {
+                seccionField.hidden = (mode === 'edit-contrib');
+            }
+            if (seccion) {
+                seccion.required = (mode !== 'edit-contrib');
+            }
+        }
+
+        function setActiveLangs(group, csv) {
+            const set = new Set(
+                String(csv || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+            );
+            group.querySelectorAll('.tag').forEach(btn => {
+                btn.classList.toggle('active', set.has(btn.dataset.slug));
+            });
+            syncTagInput(group);
+        }
+
+        function normalizeLinksMapForForm(raw) {
+            if (!raw) return {};
+            if (typeof raw === 'string') {
+                try { raw = JSON.parse(raw); } catch (_) { return {}; }
+            }
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+            const out = {};
+            Object.keys(raw).forEach(k => {
+                const slug = String(k || '').trim().toLowerCase();
+                const url  = String(raw[k] || '').trim();
+                if (slug && url) out[slug] = url;
+            });
+            return out;
+        }
+
+        async function prefillFromRecord(record) {
+            await ensureLanguagesLoaded();
+
+            titulo.value    = record.title  || '';
+            autor.value     = record.author || '';
+            anio.value      = record.year   || '';
+            fragmento.value = record.fragment || '';
+            if (seccion) {
+                // Para aportes que aún no tienen sección explícita, la
+                // derivamos del category_slug heredado.
+                const fallback = CATEGORY_TO_SECTION[(record.category_slug || '').toLowerCase()] || '';
+                seccion.value = record.section || fallback || '';
+            }
+
+            linkValues.book  = normalizeLinksMapForForm(record.links_book);
+            linkValues.audio = normalizeLinksMapForForm(record.links_audio);
+
+            setActiveLangs(langsBookEl,  record.languages_book);
+            setActiveLangs(langsAudioEl, record.languages_audio);
+            renderLangLinks('book');
+            renderLangLinks('audio');
+
+            clearCoverPreview();
+            if (record.cover_path) {
+                showExistingCover(record.cover_path);
+            }
+        }
+
+        function open() {
+            lastFocus = document.activeElement;
+            modal.hidden = false;
+            document.body.classList.add('modal-open');
+            ensureLanguagesLoaded();
+            setTimeout(() => titulo.focus(), 40);
+        }
+        function close() {
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            resetStatus();
+            form.reset();
+            clearTagGroups();
+            clearCoverPreview();
+            submitBtn.disabled = false;
+            applyMode('create');
+            editingId = null;
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        function resetStatus() {
+            statusEl.hidden = true;
+            statusEl.textContent = '';
+            statusEl.className = 'modal-status';
+        }
+        function showStatus(msg, kind) {
+            statusEl.textContent = msg;
+            statusEl.className = 'modal-status ' + (kind || '');
+            statusEl.hidden = false;
+        }
+
+        openBtn.addEventListener('click', () => {
+            applyMode('create');
+            open();
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+
+        async function openEditBook(book) {
+            if (!book || !book.id) return;
+            editingId = book.id;
+            applyMode('edit-book');
+            open();
+            await prefillFromRecord(book);
+        }
+
+        async function openEditContrib(contrib) {
+            if (!contrib || !contrib.id) return;
+            if (contrib.status && contrib.status !== 'pending') {
+                alert('Sólo se pueden editar aportes pendientes.');
+                return;
+            }
+            editingId = contrib.id;
+            applyMode('edit-contrib');
+            open();
+            await prefillFromRecord(contrib);
+        }
+
+        // Expone una API pequeña al resto del script
+        window.adminBookModal = {
+            openCreate: () => { applyMode('create'); open(); },
+            openEditBook,
+            openEditContrib
+        };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resetStatus();
+
+            const t = titulo.value.trim();
+            const a = autor.value.trim();
+            const s = seccion.value;
+            const needSection = (mode !== 'edit-contrib');
+            if (!t || !a || (needSection && !s)) {
+                showStatus(needSection
+                    ? 'Faltan campos obligatorios (título, autor o sección).'
+                    : 'Faltan campos obligatorios (título o autor).',
+                    'error');
+                return;
+            }
+
+            const labels = MODE_TEXT[mode] || MODE_TEXT.create;
+            submitBtn.disabled = true;
+            submitBtn.textContent = mode === 'create' ? 'Publicando…' : 'Guardando…';
+
+            try {
+                const fd = new FormData(form);
+
+                // Recolectamos los inputs dinámicos "Link de descarga en X"
+                // y los serializamos como dos JSONs ({slug: url}).
+                const collectLinks = (container) => {
+                    const out = {};
+                    if (!container) return out;
+                    container.querySelectorAll('input[data-slug]').forEach(inp => {
+                        const slug = inp.dataset.slug;
+                        const url  = (inp.value || '').trim();
+                        if (slug && url) out[slug] = url;
+                    });
+                    return out;
+                };
+                fd.append('links_book_json',  JSON.stringify(collectLinks(linksBookEl)));
+                fd.append('links_audio_json', JSON.stringify(collectLinks(linksAudioEl)));
+
+                let url    = '/api/admin/books';
+                let method = 'POST';
+                if (mode === 'edit-book') {
+                    url = `/api/admin/books/${editingId}`;
+                    method = 'PUT';
+                } else if (mode === 'edit-contrib') {
+                    url = `/api/admin/contributions/${editingId}`;
+                    method = 'PUT';
+                }
+
+                const res = await fetch(url, {
+                    method,
+                    credentials: 'same-origin',
+                    body: fd
+                });
+
+                if (res.status === 401) {
+                    showStatus('Tu sesión expiró. Volvé a entrar.', 'error');
+                    return;
+                }
+                if (res.status === 413) {
+                    showStatus('La portada supera 5 MB.', 'error');
+                    return;
+                }
+                if (!res.ok) {
+                    let msg = mode === 'create'
+                        ? 'No se pudo crear el libro.'
+                        : 'No se pudieron guardar los cambios.';
+                    try {
+                        const data = await res.json();
+                        if (data && data.error) msg = data.error;
+                    } catch (_) { /* ignoramos */ }
+                    showStatus(msg, 'error');
+                    return;
+                }
+
+                if (mode === 'create') {
+                    showStatus('Libro publicado en el catálogo.', 'ok');
+                    loadBooks();
+                } else if (mode === 'edit-book') {
+                    showStatus('Cambios guardados.', 'ok');
+                    loadBooks();
+                } else if (mode === 'edit-contrib') {
+                    showStatus('Cambios guardados.', 'ok');
+                    loadContribs(activeStatus);
+                }
+                setTimeout(close, 1000);
+            } catch (err) {
+                console.error(err);
+                showStatus('No se pudo conectar con el servidor.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = labels.submit;
+            }
+        });
+    })();
+
+    checkSession();
+</script>
+</body>
+</html>

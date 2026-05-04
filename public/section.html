@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>— Biblioteca Orden Nacional</title>
+    <script src="/theme.js"></script>
+    <script src="/disclaimer.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+    <a href="/" class="back-link">← Volver al catálogo</a>
+
+    <header>
+        <h1 id="sectionName">—<span class="dot">.</span></h1>
+        <div class="sub"><span id="sectionCount">0</span> títulos</div>
+    </header>
+
+    <!-- Toggle de vista -->
+    <div class="view-toggle-row">
+        <span class="view-toggle-label">vista</span>
+        <div class="view-toggle" role="tablist" aria-label="modo de vista">
+            <button type="button" class="view-toggle-btn active" data-view="list" role="tab"
+                    aria-label="Ver como lista" title="Lista">
+                <span aria-hidden="true">≡</span>
+                <span class="view-toggle-text">Lista</span>
+            </button>
+            <button type="button" class="view-toggle-btn" data-view="grid" role="tab"
+                    aria-label="Ver como cuadrícula" title="Cuadrícula">
+                <span aria-hidden="true">▦</span>
+                <span class="view-toggle-text">Cuadrícula</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="bookList"></div>
+
+    <div class="status-msg" id="statusMsg">Cargando sección…</div>
+
+</main>
+
+<script>
+    const SECTIONS = {
+        A: 'Narrativa extensa',
+        B: 'Relato breve',
+        C: 'Poesía',
+        D: 'Ensayo y pensamiento',
+        E: 'Historia y no ficción'
+    };
+
+    const VIEW_KEY = 'bon-view';
+    let activeView = (function () {
+        try {
+            const v = localStorage.getItem(VIEW_KEY);
+            return v === 'grid' ? 'grid' : 'list';
+        } catch (_) { return 'list'; }
+    })();
+
+    const nameEl    = document.getElementById('sectionName');
+    const countEl   = document.getElementById('sectionCount');
+    const listEl    = document.getElementById('bookList');
+    const statusEl  = document.getElementById('statusMsg');
+    const viewToggle = document.querySelector('.view-toggle');
+
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    function setStatus(msg, isError = false) {
+        if (!msg) { statusEl.style.display = 'none'; return; }
+        statusEl.style.display = 'block';
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('error', isError);
+    }
+
+    let cachedBooks = [];
+
+    function renderList(books) {
+        if (activeView === 'grid') {
+            return `<ul class="books-grid">
+                ${books.map(b => {
+                    const cover = b.cover_path
+                        ? `<img class="book-card-cover-img" src="${escapeHtml(b.cover_path)}"
+                                  alt="Portada de ${escapeHtml(b.title)}" loading="lazy">`
+                        : `<div class="book-card-cover-fallback">
+                                <span class="book-card-cover-title">${escapeHtml(b.title)}</span>
+                                <span class="book-card-cover-author">${escapeHtml(b.author)}</span>
+                                <span class="book-card-cover-mark">BON</span>
+                           </div>`;
+                    return `
+                        <li>
+                            <a class="book-card" href="/book.html?id=${b.id}">
+                                <div class="book-card-cover">${cover}</div>
+                                <div class="book-card-meta">
+                                    <div class="book-card-title">${escapeHtml(b.title)}</div>
+                                    <div class="book-card-author">${escapeHtml(b.author)}${b.year ? ` · ${escapeHtml(b.year)}` : ''}</div>
+                                </div>
+                            </a>
+                        </li>`;
+                }).join('')}
+            </ul>`;
+        }
+        return `<ul class="books">
+            ${books.map((b, i) => `
+                <li>
+                    <a class="book-row" href="/book.html?id=${b.id}">
+                        <span class="idx">${String(i + 1).padStart(2, '0')}</span>
+                        <span class="title">${escapeHtml(b.title)}</span>
+                        <span class="author">${escapeHtml(b.author)}</span>
+                    </a>
+                </li>
+            `).join('')}
+        </ul>`;
+    }
+
+    function syncViewToggle() {
+        if (!viewToggle) return;
+        viewToggle.querySelectorAll('.view-toggle-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === activeView);
+            b.setAttribute('aria-selected', b.dataset.view === activeView ? 'true' : 'false');
+        });
+    }
+    syncViewToggle();
+    if (viewToggle) {
+        viewToggle.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-toggle-btn');
+            if (!btn) return;
+            const v = btn.dataset.view;
+            if (v !== 'list' && v !== 'grid') return;
+            if (v === activeView) return;
+            activeView = v;
+            try { localStorage.setItem(VIEW_KEY, v); } catch (_) {}
+            syncViewToggle();
+            if (cachedBooks.length) listEl.innerHTML = renderList(cachedBooks);
+        });
+    }
+
+    async function load() {
+        const params = new URLSearchParams(location.search);
+        const section = (params.get('section') || '').toUpperCase();
+
+        if (!section || !SECTIONS[section]) {
+            setStatus('Sección inválida.', true);
+            return;
+        }
+
+        nameEl.innerHTML   = `${escapeHtml(SECTIONS[section])}<span class="dot">.</span>`;
+        document.title     = `${SECTIONS[section]} · Biblioteca Orden Nacional`;
+
+        try {
+            const res = await fetch('/api/books');
+            if (!res.ok) throw new Error('respuesta inválida');
+            const all = await res.json();
+            cachedBooks = all
+                .filter(b => b.section === section)
+                .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+
+            countEl.textContent = cachedBooks.length;
+
+            if (cachedBooks.length === 0) {
+                setStatus('No hay títulos en esta sección.');
+                return;
+            }
+
+            listEl.innerHTML = renderList(cachedBooks);
+            setStatus(null);
+        } catch (err) {
+            console.error(err);
+            setStatus('No se pudo cargar la sección. Probá recargar la página.', true);
+        }
+    }
+
+    load();
+</script>
+</body>
+</html>

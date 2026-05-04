@@ -1,0 +1,72 @@
+# -----------------------------------------------------------------------------
+# Biblioteca Orden Nacional - orquestacion de contenedores
+#
+#   app  -> Node 20 (Express) sirve el catalogo en http://localhost:4280
+#   db   -> MySQL 8, inicializada con db/init.sql (expuesta en host:33069)
+#
+# Las credenciales se leen desde el archivo .env (no versionado).
+# Los valores tras `:-` son los defaults que aplican si la variable no está
+# definida en el .env, pensados solo para desarrollo local.
+# -----------------------------------------------------------------------------
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: orden_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsecret}
+      MYSQL_DATABASE: ${DB_NAME:-biblioteca}
+      MYSQL_USER: ${DB_USER:-orden}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-orden}
+    ports:
+      - "33069:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$DB_USER -p$$DB_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  app:
+    build: .
+    container_name: orden_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-orden}
+      DB_PASSWORD: ${DB_PASSWORD:-orden}
+      DB_NAME: ${DB_NAME:-biblioteca}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      ADMIN_SECRET: ${ADMIN_SECRET:-change-me-in-prod-please}
+    ports:
+      - "4280:3000"
+    volumes:
+      - ./public:/app/public
+      - ./server.js:/app/server.js
+    # nodemon vigila server.js y public/. --legacy-watch usa polling, que es
+    # lo único que funciona de forma fiable sobre bind mounts en Docker Desktop
+    # (Windows / Mac) porque los eventos inotify no atraviesan el mount.
+    command: ["npx", "nodemon", "--legacy-watch", "--watch", "server.js", "--watch", "public", "server.js"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mysql_data:

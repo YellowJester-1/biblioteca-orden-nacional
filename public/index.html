@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca Orden Nacional</title>
+    <script src="/theme.js"></script>
+    <script src="/disclaimer.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+    <header>
+        <div class="overline">Biblioteca</div>
+        <h1>Orden Nacional<span class="dot">.</span></h1>
+        <div class="sub-row">
+            <div class="sub">Catálogo / <span id="totalCount">0</span> registros</div>
+            <button type="button" class="contribute-btn" id="openContributeBtn">
+                <span class="contribute-btn-icon">+</span>
+                <span>Aportar un título</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Búsqueda -->
+    <div class="search">
+        <input type="text" id="searchInput" placeholder="Buscar por título o autor" autocomplete="off">
+        <button class="clear" id="clearBtn" title="Limpiar">×</button>
+    </div>
+
+    <!-- Secciones (filtro rápido) -->
+    <div class="cats" id="cats">
+        <span class="cats-label">Catálogo</span>
+        <button data-section="todas" class="active">Todas</button>
+    </div>
+
+    <!-- Toggle de vista -->
+    <div class="view-toggle-row">
+        <span class="view-toggle-label">vista</span>
+        <div class="view-toggle" role="tablist" aria-label="modo de vista">
+            <button type="button" class="view-toggle-btn active" data-view="list" role="tab"
+                    aria-label="Ver como lista" title="Lista">
+                <span aria-hidden="true">≡</span>
+                <span class="view-toggle-text">Lista</span>
+            </button>
+            <button type="button" class="view-toggle-btn" data-view="grid" role="tab"
+                    aria-label="Ver como cuadrícula" title="Cuadrícula">
+                <span aria-hidden="true">▦</span>
+                <span class="view-toggle-text">Cuadrícula</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Secciones -->
+    <div id="sections"></div>
+
+    <div class="status-msg" id="statusMsg">Cargando catálogo…</div>
+
+    <p class="title-note">
+        <span class="title-note-mark">*</span>
+        Los títulos figuran en español cuando la obra cuenta con traducción
+        establecida al español. En caso contrario, se conservan en su idioma
+        de origen.
+    </p>
+
+</main>
+
+<!-- ============================================================ -->
+<!-- Modal: aportar un título -->
+<!-- ============================================================ -->
+<div class="modal" id="contributeModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card modal-card-wide" role="dialog" aria-labelledby="contributeTitle" aria-modal="true">
+        <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+        <div class="modal-overline">aporte</div>
+        <h2 class="modal-title" id="contributeTitle">Aportar un título</h2>
+        <p class="modal-help">
+            Sumá un libro al catálogo. Completá lo que tengas a mano — los campos marcados como
+            <em>opcional</em> podés dejarlos vacíos. Lo revisamos antes de publicar.
+        </p>
+
+        <form id="contributeForm" novalidate>
+            <div class="form-grid">
+                <label class="form-field form-field-full form-field-cover">
+                    <span class="form-label">Portada <em>(opcional)</em></span>
+                    <input type="file" id="cTagPortada" name="cover" accept="image/*">
+                    <div class="cover-preview" id="cCoverPreview" hidden>
+                        <img class="cover-preview-img" id="cCoverPreviewImg" alt="">
+                        <span class="cover-preview-label">vista previa</span>
+                    </div>
+                    <span class="form-hint">
+                        <strong>Tamaño ideal: 800 × 1200 px</strong> (proporción 2:3, vertical) ·
+                        formato jpg, png o webp · máx. 5 MB.
+                        Si la imagen tiene otra proporción, se recortará al centro al mostrarla.
+                    </span>
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Título <em class="req">*</em></span>
+                    <input type="text" id="cTagTitulo" name="title" required maxlength="200"
+                           placeholder="Ej: Tempestades de acero">
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Autor <em class="req">*</em></span>
+                    <input type="text" id="cTagAutor" name="author" required maxlength="150"
+                           placeholder="Ej: Ernst Jünger">
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Sección <em class="req">*</em></span>
+                    <select id="cTagSeccion" name="section" required>
+                        <option value="" disabled selected>— Elegir —</option>
+                        <option value="A">Narrativa extensa</option>
+                        <option value="B">Relato breve</option>
+                        <option value="C">Poesía</option>
+                        <option value="D">Ensayo y pensamiento</option>
+                        <option value="E">Historia y no ficción</option>
+                    </select>
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Año <em>(opcional)</em></span>
+                    <input type="text" id="cTagAnio" name="year" maxlength="20" inputmode="numeric"
+                           placeholder="Ej: 1920">
+                </label>
+
+                <div class="form-field form-field-full">
+                    <span class="form-label">Idioma del libro <em>(opcional)</em></span>
+                    <div class="tag-group" id="cTagLangsBook" data-target="cInputLangsBook"></div>
+                    <input type="hidden" id="cInputLangsBook" name="languages_book" value="">
+                    <span class="form-hint">Elegí uno o más — pdf / epub</span>
+                    <div class="lang-link-list" id="cLangLinksBook"></div>
+                </div>
+
+                <div class="form-field form-field-full">
+                    <span class="form-label">Idioma del audiolibro <em>(opcional)</em></span>
+                    <div class="tag-group" id="cTagLangsAudio" data-target="cInputLangsAudio"></div>
+                    <input type="hidden" id="cInputLangsAudio" name="languages_audio" value="">
+                    <span class="form-hint">Si hay audiolibro disponible, en qué idiomas</span>
+                    <div class="lang-link-list" id="cLangLinksAudio"></div>
+                </div>
+
+                <label class="form-field form-field-full">
+                    <span class="form-label">Fragmento <em>(opcional)</em></span>
+                    <textarea id="cTagFragmento" name="fragment" rows="5" maxlength="6000"
+                              placeholder="Pegá un fragmento representativo del libro…"></textarea>
+                    <span class="form-hint">Máx. 6000 caracteres</span>
+                </label>
+
+                <label class="form-field form-field-full">
+                    <span class="form-label">Notas para la administración <em>(opcional)</em></span>
+                    <textarea id="cTagNotas" name="notes" rows="3" maxlength="1000"
+                              placeholder="Contexto, fuente, edición, traducción…"></textarea>
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-muted" data-close>Cancelar</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="contributeSubmitBtn">
+                    Enviar aporte
+                </button>
+            </div>
+            <div class="modal-status" id="contributeStatus" hidden></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const SECTIONS = {
+        A: 'Narrativa extensa',
+        B: 'Relato breve',
+        C: 'Poesía',
+        D: 'Ensayo y pensamiento',
+        E: 'Historia y no ficción'
+    };
+
+    let books = [];
+    let activeSection = 'todas';
+    let query = '';
+
+    // Modo de vista persistente
+    const VIEW_KEY = 'bon-view';
+    let activeView = (function () {
+        try {
+            const v = localStorage.getItem(VIEW_KEY);
+            return v === 'grid' ? 'grid' : 'list';
+        } catch (_) { return 'list'; }
+    })();
+
+    const searchInput  = document.getElementById('searchInput');
+    const clearBtn     = document.getElementById('clearBtn');
+    const catsEl       = document.getElementById('cats');
+    const sectionsEl   = document.getElementById('sections');
+    const statusEl     = document.getElementById('statusMsg');
+    const totalCountEl = document.getElementById('totalCount');
+    const viewToggle   = document.querySelector('.view-toggle');
+
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    function setStatus(msg, isError = false) {
+        if (!msg) { statusEl.style.display = 'none'; return; }
+        statusEl.style.display = 'block';
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('error', isError);
+    }
+
+    // Capitaliza la primera letra de un string (respeta acentos)
+    const cap = (s) => {
+        if (!s) return s;
+        return s.charAt(0).toLocaleUpperCase('es') + s.slice(1);
+    };
+
+    async function loadData() {
+        try {
+            setStatus('Cargando catálogo…');
+            const booksRes = await fetch('/api/books');
+            if (!booksRes.ok) throw new Error('respuesta inválida');
+
+            // Filtramos los libros de Teatro (sección F) en el front público
+            books = (await booksRes.json()).filter(b => b.section !== 'F');
+
+            totalCountEl.textContent = books.length;
+            renderSectionsFilter();
+            // render() decide si mostrar "Sin resultados" o limpiar el status,
+            // así que no le pisamos el mensaje con un setStatus(null) acá.
+            render();
+        } catch (err) {
+            console.error(err);
+            setStatus('No se pudo cargar el catálogo. Probá recargar la página.', true);
+        }
+    }
+
+    // Barra de secciones — usa el mapa SECTIONS (Teatro ya está fuera)
+    function renderSectionsFilter() {
+        const parts = ['<span class="cats-label">Catálogo</span>'];
+        parts.push(`<button data-section="todas" class="active">Todas</button>`);
+        Object.keys(SECTIONS).forEach(k => {
+            parts.push('<span class="sep">/</span>');
+            parts.push(`<button data-section="${k}">${escapeHtml(SECTIONS[k])}</button>`);
+        });
+        catsEl.innerHTML = parts.join('');
+    }
+
+    function renderBookList(visible) {
+        return `<ul class="books">
+            ${visible.map((b, i) => `
+                <li>
+                    <a class="book-row" href="/book.html?id=${b.id}">
+                        <span class="idx">${String(i + 1).padStart(2, '0')}</span>
+                        <span class="title">${escapeHtml(b.title)}</span>
+                        <span class="author">${escapeHtml(b.author)}</span>
+                    </a>
+                </li>
+            `).join('')}
+        </ul>`;
+    }
+
+    function renderBookGrid(visible) {
+        return `<ul class="books-grid">
+            ${visible.map(b => {
+                const cover = b.cover_path
+                    ? `<img class="book-card-cover-img" src="${escapeHtml(b.cover_path)}"
+                              alt="Portada de ${escapeHtml(b.title)}" loading="lazy">`
+                    : `<div class="book-card-cover-fallback">
+                            <span class="book-card-cover-title">${escapeHtml(b.title)}</span>
+                            <span class="book-card-cover-author">${escapeHtml(b.author)}</span>
+                            <span class="book-card-cover-mark">BON</span>
+                       </div>`;
+                return `
+                    <li>
+                        <a class="book-card" href="/book.html?id=${b.id}">
+                            <div class="book-card-cover">${cover}</div>
+                            <div class="book-card-meta">
+                                <div class="book-card-title">${escapeHtml(b.title)}</div>
+                                <div class="book-card-author">${escapeHtml(b.author)}${b.year ? ` · ${escapeHtml(b.year)}` : ''}</div>
+                            </div>
+                        </a>
+                    </li>`;
+            }).join('')}
+        </ul>`;
+    }
+
+    function render() {
+        const q = query.trim().toLowerCase();
+        const filtered = books.filter(b => {
+            const matchesSection = activeSection === 'todas' || b.section === activeSection;
+            const matchesQuery = !q
+                || b.title.toLowerCase().includes(q)
+                || b.author.toLowerCase().includes(q);
+            return matchesSection && matchesQuery;
+        });
+
+        const grouped = {};
+        filtered.forEach(b => {
+            (grouped[b.section] = grouped[b.section] || []).push(b);
+        });
+
+        // En cards mostramos un poco menos por sección para que entren bien
+        const SECTION_LIMIT = activeView === 'grid' ? 8 : 10;
+
+        let html = '';
+        Object.keys(SECTIONS).filter(k => grouped[k]).forEach(k => {
+            const list = grouped[k].sort((x, y) => x.title.localeCompare(y.title, 'es'));
+            const visible = list.slice(0, SECTION_LIMIT);
+            const hasMore = list.length > SECTION_LIMIT;
+            const body = activeView === 'grid'
+                ? renderBookGrid(visible)
+                : renderBookList(visible);
+
+            html += `
+                <section class="section">
+                    <div class="section-head">
+                        <h2>${escapeHtml(SECTIONS[k])}</h2>
+                        <span class="count">${list.length} ${list.length === 1 ? 'título' : 'títulos'}</span>
+                    </div>
+                    ${body}
+                    ${hasMore ? `
+                        <div class="section-more">
+                            <a class="more-link" href="/section.html?section=${k}">
+                                Ver los ${list.length} títulos de esta sección →
+                            </a>
+                        </div>
+                    ` : ''}
+                </section>`;
+        });
+
+        sectionsEl.innerHTML = html;
+
+        if (filtered.length === 0) {
+            setStatus('Sin resultados');
+        } else {
+            setStatus(null);
+        }
+    }
+
+    searchInput.addEventListener('input', (e) => {
+        query = e.target.value;
+        render();
+    });
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        query = '';
+        searchInput.focus();
+        render();
+    });
+
+    catsEl.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') return;
+        const next = e.target.dataset.section;
+        if (!next) return;
+        catsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        activeSection = next;
+        render();
+    });
+
+    // Toggle de vista (lista <-> cuadrícula)
+    function syncViewToggle() {
+        if (!viewToggle) return;
+        viewToggle.querySelectorAll('.view-toggle-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === activeView);
+            b.setAttribute('aria-selected', b.dataset.view === activeView ? 'true' : 'false');
+        });
+    }
+    syncViewToggle();
+    if (viewToggle) {
+        viewToggle.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-toggle-btn');
+            if (!btn) return;
+            const v = btn.dataset.view;
+            if (v !== 'list' && v !== 'grid') return;
+            if (v === activeView) return;
+            activeView = v;
+            try { localStorage.setItem(VIEW_KEY, v); } catch (_) {}
+            syncViewToggle();
+            render();
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // Modal: aportar un título
+    // -------------------------------------------------------------------------
+    (function setupContributeModal() {
+        const modal     = document.getElementById('contributeModal');
+        const openBtn   = document.getElementById('openContributeBtn');
+        const form      = document.getElementById('contributeForm');
+        const submitBtn = document.getElementById('contributeSubmitBtn');
+        const statusEl  = document.getElementById('contributeStatus');
+        const titulo    = document.getElementById('cTagTitulo');
+        const autor     = document.getElementById('cTagAutor');
+        const seccion   = document.getElementById('cTagSeccion');
+        const langsBookEl  = document.getElementById('cTagLangsBook');
+        const langsAudioEl = document.getElementById('cTagLangsAudio');
+        const linksBookEl  = document.getElementById('cLangLinksBook');
+        const linksAudioEl = document.getElementById('cLangLinksAudio');
+        const coverInput   = document.getElementById('cTagPortada');
+        const coverPreview = document.getElementById('cCoverPreview');
+        const coverPreviewImg = document.getElementById('cCoverPreviewImg');
+
+        if (!modal || !openBtn) return;
+
+        let lastFocus = null;
+        let languagesLoaded = false;
+        // Mapa slug → nombre de idioma — lo necesitamos para mostrar el label
+        // de cada input dinámico ("Link de descarga en español", etc.)
+        let langNameMap = {};
+        // Backup de los valores ya tipeados por idioma — para no perderlos
+        // si el usuario destilda y vuelve a tildar el mismo idioma.
+        const linkValues = { book: {}, audio: {} };
+        let coverPreviewUrl = null;
+
+        async function ensureLanguagesLoaded() {
+            if (languagesLoaded) return;
+            try {
+                const res = await fetch('/api/languages');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const langs = await res.json();
+                applyLanguages(langs);
+                languagesLoaded = true;
+            } catch (err) {
+                console.error('no se pudieron cargar idiomas:', err);
+                // Fallback mínimo si la API falla
+                const fallback = [{slug:'es',name:'español'}, {slug:'en',name:'inglés'}];
+                applyLanguages(fallback);
+                languagesLoaded = true;
+            }
+        }
+
+        function applyLanguages(langs) {
+            langNameMap = {};
+            langs.forEach(l => { langNameMap[l.slug] = l.name; });
+            renderTagGroup(langsBookEl,  langs);
+            renderTagGroup(langsAudioEl, langs);
+        }
+
+        function renderTagGroup(container, langs) {
+            container.innerHTML = langs.map(l => `
+                <button type="button" class="tag" data-slug="${escapeHtml(l.slug)}">
+                    ${escapeHtml(cap(l.name))}
+                </button>
+            `).join('');
+        }
+
+        function syncTagInput(group) {
+            const inputId = group.dataset.target;
+            const hidden = document.getElementById(inputId);
+            if (!hidden) return;
+            const slugs = Array.from(group.querySelectorAll('.tag.active'))
+                .map(b => b.dataset.slug);
+            hidden.value = slugs.join(',');
+        }
+
+        // Re-renderiza la lista de inputs "Link de descarga en X" según
+        // los idiomas que están activos en el tag-group correspondiente.
+        // kind = 'book' | 'audio'.
+        function renderLangLinks(kind) {
+            const group     = kind === 'audio' ? langsAudioEl : langsBookEl;
+            const container = kind === 'audio' ? linksAudioEl  : linksBookEl;
+            if (!group || !container) return;
+
+            // Antes de re-renderizar, conservamos lo tipeado en memoria
+            container.querySelectorAll('input[data-slug]').forEach(inp => {
+                const slug = inp.dataset.slug;
+                if (slug) linkValues[kind][slug] = inp.value;
+            });
+
+            const slugs = Array.from(group.querySelectorAll('.tag.active'))
+                .map(b => b.dataset.slug);
+
+            if (slugs.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = slugs.map(slug => {
+                const langName = langNameMap[slug] || slug;
+                const stored   = linkValues[kind][slug] || '';
+                const id       = `cLink_${kind}_${slug}`;
+                return `
+                    <label class="lang-link-row">
+                        <span class="lang-link-label">
+                            Link de descarga en ${escapeHtml(langName)}
+                            <em>(opcional)</em>
+                        </span>
+                        <input type="url"
+                               id="${id}"
+                               data-slug="${escapeHtml(slug)}"
+                               value="${escapeHtml(stored)}"
+                               placeholder="https://…">
+                    </label>`;
+            }).join('');
+        }
+
+        function clearTagGroups() {
+            [langsBookEl, langsAudioEl].forEach(group => {
+                group.querySelectorAll('.tag.active').forEach(b => b.classList.remove('active'));
+                syncTagInput(group);
+            });
+            linkValues.book  = {};
+            linkValues.audio = {};
+            renderLangLinks('book');
+            renderLangLinks('audio');
+        }
+
+        // Toggle al click en cualquiera de los grupos
+        [
+            { group: langsBookEl,  kind: 'book'  },
+            { group: langsAudioEl, kind: 'audio' }
+        ].forEach(({ group, kind }) => {
+            group.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tag');
+                if (!btn) return;
+                btn.classList.toggle('active');
+                syncTagInput(group);
+                renderLangLinks(kind);
+            });
+        });
+
+        // Preview de portada — al elegir un archivo, mostramos cómo se
+        // vería ya recortada al centro (object-fit: cover en el CSS).
+        if (coverInput) {
+            coverInput.addEventListener('change', () => {
+                if (coverPreviewUrl) {
+                    URL.revokeObjectURL(coverPreviewUrl);
+                    coverPreviewUrl = null;
+                }
+                const file = coverInput.files && coverInput.files[0];
+                if (!file || !file.type.startsWith('image/')) {
+                    coverPreviewImg.removeAttribute('src');
+                    coverPreview.hidden = true;
+                    return;
+                }
+                coverPreviewUrl = URL.createObjectURL(file);
+                coverPreviewImg.src = coverPreviewUrl;
+                coverPreviewImg.alt = 'Vista previa de la portada';
+                coverPreview.hidden = false;
+            });
+        }
+
+        function clearCoverPreview() {
+            if (coverPreviewUrl) {
+                URL.revokeObjectURL(coverPreviewUrl);
+                coverPreviewUrl = null;
+            }
+            if (coverPreviewImg) coverPreviewImg.removeAttribute('src');
+            if (coverPreview)    coverPreview.hidden = true;
+        }
+
+        function open() {
+            lastFocus = document.activeElement;
+            modal.hidden = false;
+            document.body.classList.add('modal-open');
+            ensureLanguagesLoaded();
+            setTimeout(() => titulo.focus(), 40);
+        }
+        function close() {
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            resetStatus();
+            form.reset();
+            clearTagGroups();
+            clearCoverPreview();
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enviar aporte';
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        function resetStatus() {
+            statusEl.hidden = true;
+            statusEl.textContent = '';
+            statusEl.className = 'modal-status';
+        }
+        function showStatus(msg, kind) {
+            statusEl.textContent = msg;
+            statusEl.className = 'modal-status ' + (kind || '');
+            statusEl.hidden = false;
+        }
+
+        openBtn.addEventListener('click', open);
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resetStatus();
+
+            // Validación mínima de los requeridos
+            const t = titulo.value.trim();
+            const a = autor.value.trim();
+            const s = seccion.value;
+            if (!t || !a || !s) {
+                showStatus('Faltan campos obligatorios (título, autor o sección).', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando…';
+
+            try {
+                // FormData para que el backend pueda recibir la portada via multer
+                const fd = new FormData(form);
+                // Renombramos los campos a los nombres que espera el backend
+                // (ya están bien por el atributo name de cada input).
+
+                // Recolectamos los inputs dinámicos "Link de descarga en X"
+                // y los serializamos como dos JSONs ({slug: url}) que el
+                // backend consume en columnas JSON de la tabla.
+                const collectLinks = (container) => {
+                    const out = {};
+                    if (!container) return out;
+                    container.querySelectorAll('input[data-slug]').forEach(inp => {
+                        const slug = inp.dataset.slug;
+                        const url  = (inp.value || '').trim();
+                        if (slug && url) out[slug] = url;
+                    });
+                    return out;
+                };
+                fd.append('links_book_json',  JSON.stringify(collectLinks(linksBookEl)));
+                fd.append('links_audio_json', JSON.stringify(collectLinks(linksAudioEl)));
+
+                const res = await fetch('/api/contributions', {
+                    method: 'POST',
+                    body: fd
+                });
+
+                if (res.status === 413) {
+                    showStatus('La portada supera 5 MB.', 'error');
+                    return;
+                }
+                if (!res.ok) {
+                    let msg = 'No se pudo enviar el aporte.';
+                    try {
+                        const data = await res.json();
+                        if (data && data.error) msg = data.error;
+                    } catch (_) { /* ignoramos */ }
+                    showStatus(msg, 'error');
+                    return;
+                }
+
+                showStatus('Gracias por el aporte. Lo revisamos antes de publicarlo.', 'ok');
+                setTimeout(close, 1800);
+            } catch (err) {
+                console.error(err);
+                showStatus('No se pudo conectar con el servidor.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar aporte';
+            }
+        });
+    })();
+
+    loadData();
+</script>
+</body>
+</html>

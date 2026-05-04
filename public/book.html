@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>— Biblioteca Orden Nacional</title>
+    <script src="/theme.js"></script>
+    <script src="/disclaimer.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="book-page">
+
+    <a href="/" class="back-link">← Volver al catálogo</a>
+
+    <article class="book-detail" id="bookDetail" hidden>
+        <!-- Portada: img si el libro tiene cover_path; si no, la tipográfica -->
+        <div class="book-cover" id="bookCover">
+            <img class="book-cover-img" id="bookCoverImg" alt="" hidden>
+            <div class="book-cover-inner" id="bookCoverInner">
+                <div class="book-cover-overline" id="coverCategory">—</div>
+                <div class="book-cover-title"    id="coverTitle">—</div>
+                <div class="book-cover-rule"></div>
+                <div class="book-cover-author"   id="coverAuthor">—</div>
+                <div class="book-cover-mark">BON</div>
+            </div>
+        </div>
+
+        <div class="book-meta">
+            <div class="overline" id="bookCategory">—</div>
+            <h1 id="bookTitle">—</h1>
+            <div class="book-author">
+                <span class="book-author-label">Por</span>
+                <span id="bookAuthor">—</span>
+                <span id="bookYearWrap" hidden> · <span id="bookYear"></span></span>
+            </div>
+            <dl class="book-facts">
+                <dt>Sección</dt>
+                <dd id="bookSection">—</dd>
+
+                <dt>Registro</dt>
+                <dd id="bookId">—</dd>
+
+                <dt id="dtFormatos" hidden>Descargas</dt>
+                <dd class="book-facts-dl" id="ddFormatos" hidden></dd>
+
+                <dt id="dtIdiomaLibro" hidden>Idioma</dt>
+                <dd id="ddIdiomaLibro" hidden></dd>
+
+                <dt id="dtAudio" hidden>Audiolibro</dt>
+                <dd class="book-facts-audio" id="ddAudio" hidden></dd>
+
+                <dt id="dtIdiomaAudio" hidden>Idioma audio</dt>
+                <dd id="ddIdiomaAudio" hidden></dd>
+            </dl>
+
+            <div class="book-actions">
+                <button type="button" class="report-link" id="openReportBtn">
+                    <span class="report-link-icon">⚠</span>
+                    <span>Reportar enlace caído</span>
+                </button>
+                <button type="button" class="report-link report-link-contrib" id="openVersionBtn">
+                    <span class="report-link-icon">+</span>
+                    <span>Aportar versión / idioma faltante</span>
+                </button>
+            </div>
+        </div>
+    </article>
+
+    <section class="book-content" id="bookContent" hidden>
+        <div class="book-content-label">Fragmento</div>
+        <div id="bookFragment"></div>
+    </section>
+
+    <div class="status-msg" id="statusMsg">Cargando libro…</div>
+
+</main>
+
+<!-- Modal: reportar enlace caído -->
+<div class="modal" id="reportModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-labelledby="reportModalTitle" aria-modal="true">
+        <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+        <div class="modal-overline">reporte</div>
+        <h2 class="modal-title" id="reportModalTitle">Denunciar enlace caído</h2>
+        <p class="modal-help">Describí brevemente el problema (qué formato, qué pasa al descargar, etc.). Lo revisamos y lo arreglamos.</p>
+        <form id="reportForm" novalidate>
+            <textarea id="reportText" name="message"
+                      rows="5" minlength="5" maxlength="2000" required
+                      placeholder="Ej: el PDF no descarga, el audio está en silencio, el epub devuelve 404…"></textarea>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-muted" data-close>Cancelar</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="reportSubmitBtn">Enviar reporte</button>
+            </div>
+            <div class="modal-status" id="reportStatus" hidden></div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: aportar versión / idioma faltante u observación -->
+<div class="modal" id="versionModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-labelledby="versionModalTitle" aria-modal="true">
+        <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+        <div class="modal-overline">aporte</div>
+        <h2 class="modal-title" id="versionModalTitle">Aportar sobre este libro</h2>
+        <p class="modal-help">Compartí una versión o idioma que no figura, o avisanos de una corrección (año mal, autor mal escrito, etc.). Pasa por la misma cola de moderación.</p>
+        <form id="versionForm" novalidate>
+
+            <fieldset class="mode-toggle">
+                <legend class="visually-hidden">Tipo de aporte</legend>
+                <label class="mode-option">
+                    <input type="radio" name="mode" value="version" checked>
+                    <span>Versión / idioma</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="mode" value="note">
+                    <span>Corrección u observación</span>
+                </label>
+            </fieldset>
+
+            <!-- Bloque "versión": formato + idioma + URL -->
+            <div id="versionFields">
+                <div class="modal-grid">
+                    <label class="modal-field">
+                        <span>Formato</span>
+                        <select id="versionKind" name="kind">
+                            <option value="book">Libro (PDF / EPUB)</option>
+                            <option value="audio">Audiolibro</option>
+                        </select>
+                    </label>
+                    <label class="modal-field">
+                        <span>Idioma</span>
+                        <select id="versionLang" name="language">
+                            <option value="" disabled selected>elegí un idioma…</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="modal-field">
+                    <span>Enlace de descarga (opcional)</span>
+                    <input type="url" id="versionUrl" name="download_url"
+                           maxlength="500" placeholder="https://…">
+                </label>
+            </div>
+
+            <label class="modal-field">
+                <span id="versionNotesLabel">Notas (opcional)</span>
+                <textarea id="versionNotes" name="notes" rows="4" maxlength="1000"
+                          placeholder="Editorial, año, calidad de la traducción, narrador, etc."></textarea>
+            </label>
+
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-muted" data-close>Cancelar</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="versionSubmitBtn">Enviar aporte</button>
+            </div>
+            <div class="modal-status" id="versionStatus" hidden></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const detailEl    = document.getElementById('bookDetail');
+    const contentEl   = document.getElementById('bookContent');
+    const fragmentEl  = document.getElementById('bookFragment');
+    const statusEl    = document.getElementById('statusMsg');
+
+    const coverImgEl   = document.getElementById('bookCoverImg');
+    const coverInnerEl = document.getElementById('bookCoverInner');
+
+    const coverCatEl    = document.getElementById('coverCategory');
+    const coverTitleEl  = document.getElementById('coverTitle');
+    const coverAuthorEl = document.getElementById('coverAuthor');
+
+    const catEl       = document.getElementById('bookCategory');
+    const titleEl     = document.getElementById('bookTitle');
+    const authorEl    = document.getElementById('bookAuthor');
+    const yearWrapEl  = document.getElementById('bookYearWrap');
+    const yearEl      = document.getElementById('bookYear');
+    const sectionEl   = document.getElementById('bookSection');
+    const idEl        = document.getElementById('bookId');
+
+    const dtFormatos     = document.getElementById('dtFormatos');
+    const ddFormatos     = document.getElementById('ddFormatos');
+    const dtAudio        = document.getElementById('dtAudio');
+    const ddAudio        = document.getElementById('ddAudio');
+    const dtIdiomaLibro  = document.getElementById('dtIdiomaLibro');
+    const ddIdiomaLibro  = document.getElementById('ddIdiomaLibro');
+    const dtIdiomaAudio  = document.getElementById('dtIdiomaAudio');
+    const ddIdiomaAudio  = document.getElementById('ddIdiomaAudio');
+
+    const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    // Mapa: letra de sección -> nombre legible (Teatro queda fuera del público)
+    const SECTION_NAMES = {
+        A: 'Narrativa extensa',
+        B: 'Relato breve',
+        C: 'Poesía',
+        D: 'Ensayo y pensamiento',
+        E: 'Historia y no ficción'
+    };
+
+    // Capitaliza la primera letra
+    const cap = (s) => {
+        if (!s) return s;
+        return s.charAt(0).toLocaleUpperCase('es') + s.slice(1);
+    };
+
+    function setStatus(msg, isError = false) {
+        if (!msg) { statusEl.style.display = 'none'; return; }
+        statusEl.style.display = 'block';
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('error', isError);
+    }
+
+    // Cache de nombres de idioma (slug -> nombre legible)
+    let LANG_NAMES = {};
+    async function loadLanguageNames() {
+        if (Object.keys(LANG_NAMES).length) return;
+        try {
+            const res = await fetch('/api/languages');
+            if (!res.ok) return;
+            const langs = await res.json();
+            langs.forEach(l => { LANG_NAMES[l.slug] = l.name; });
+        } catch (_) { /* mostramos slugs */ }
+    }
+    function renderLangPills(csv) {
+        if (!csv) return '';
+        return csv.split(',')
+            .map(s => s.trim()).filter(Boolean)
+            .map(s => `<span class="lang-pill">${escapeHtml(cap(LANG_NAMES[s] || s))}</span>`)
+            .join('');
+    }
+
+    // Algunos drivers MySQL devuelven JSON como objeto, otros como string.
+    // Normalizamos a objeto plano (o {} si no es válido).
+    function normalizeLinksMap(raw) {
+        if (!raw) return {};
+        if (typeof raw === 'string') {
+            try { raw = JSON.parse(raw); } catch (_) { return {}; }
+        }
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+        const out = {};
+        Object.keys(raw).forEach(k => {
+            const slug = String(k || '').trim().toLowerCase();
+            const url  = String(raw[k] || '').trim();
+            if (slug && url) out[slug] = url;
+        });
+        return out;
+    }
+
+    // Renderiza un grupo de enlaces "Idioma ↗" a partir de un mapa
+    // {slug: url}. Devuelve HTML listo para meter en un <dd>.
+    function renderLangLinks(map) {
+        const slugs = Object.keys(map);
+        if (slugs.length === 0) return '';
+        return slugs.map(slug => {
+            const label = cap(LANG_NAMES[slug] || slug);
+            return `<a class="dl-link" href="${escapeHtml(map[slug])}"
+                       target="_blank" rel="noopener">${escapeHtml(label)}&nbsp;↗</a>`;
+        }).join('');
+    }
+
+    async function loadBook() {
+        const params = new URLSearchParams(location.search);
+        const id = params.get('id');
+        if (!id) {
+            setStatus('Falta el parámetro id en la URL.', true);
+            return;
+        }
+
+        try {
+            // Cargamos en paralelo los nombres de idioma (cache) y el libro
+            const [, res] = await Promise.all([
+                loadLanguageNames(),
+                fetch(`/api/books/${encodeURIComponent(id)}`)
+            ]);
+            if (res.status === 404) {
+                setStatus('Ese libro no existe en el catálogo.', true);
+                return;
+            }
+            if (!res.ok) throw new Error('respuesta inválida');
+
+            const b = await res.json();
+
+            // Teatro está fuera del catálogo público
+            if (b.section === 'F') {
+                setStatus('Ese libro no existe en el catálogo.', true);
+                return;
+            }
+
+            document.title = `${b.title} — ${b.author} · Biblioteca Orden Nacional`;
+
+            // ---- Portada ----
+            const sectionLabel = SECTION_NAMES[b.section] || '';
+            if (b.cover_path) {
+                coverImgEl.src = b.cover_path;
+                coverImgEl.alt = `Portada de ${b.title}`;
+                coverImgEl.hidden = false;
+                coverInnerEl.hidden = true;
+            } else {
+                coverImgEl.hidden = true;
+                coverInnerEl.hidden = false;
+                coverCatEl.textContent    = sectionLabel;
+                coverTitleEl.textContent  = b.title;
+                coverAuthorEl.textContent = b.author;
+            }
+
+            // ---- Metadata principal ----
+            catEl.textContent     = sectionLabel;
+            titleEl.textContent   = b.title;
+            authorEl.textContent  = b.author;
+            sectionEl.textContent = SECTION_NAMES[b.section] || b.section;
+            idEl.textContent      = String(b.id).padStart(4, '0');
+
+            if (b.year) {
+                yearEl.textContent = b.year;
+                yearWrapEl.hidden = false;
+            } else {
+                yearWrapEl.hidden = true;
+            }
+
+            // ---- Descargas del libro ----
+            // Modelo nuevo: links_book es un mapa {idioma: url}. Si está vacío,
+            // caemos a las columnas legacy (link_pdf / link_epub) por backward
+            // compat con datos viejos.
+            const linksBookMap = normalizeLinksMap(b.links_book);
+            let booksHtml = renderLangLinks(linksBookMap);
+            if (!booksHtml) {
+                const legacy = [];
+                if (b.link_pdf)  legacy.push(`<a class="dl-link" href="${escapeHtml(b.link_pdf)}"  target="_blank" rel="noopener">PDF&nbsp;↗</a>`);
+                if (b.link_epub) legacy.push(`<a class="dl-link" href="${escapeHtml(b.link_epub)}" target="_blank" rel="noopener">EPUB&nbsp;↗</a>`);
+                booksHtml = legacy.join('');
+            }
+            if (booksHtml) {
+                ddFormatos.innerHTML = booksHtml;
+                dtFormatos.hidden = false;
+                ddFormatos.hidden = false;
+            } else {
+                dtFormatos.hidden = true;
+                ddFormatos.hidden = true;
+            }
+
+            // ---- Idioma del libro ----
+            // Si no vino el CSV viejo, derivamos el listado a partir del
+            // mapa de links por idioma (las claves son los idiomas activos).
+            const bookLangsCsv = b.languages_book
+                || (Object.keys(linksBookMap).length ? Object.keys(linksBookMap).join(',') : '');
+            const bookLangsHtml = renderLangPills(bookLangsCsv);
+            if (bookLangsHtml) {
+                ddIdiomaLibro.innerHTML = bookLangsHtml;
+                dtIdiomaLibro.hidden = false;
+                ddIdiomaLibro.hidden = false;
+            } else {
+                dtIdiomaLibro.hidden = true;
+                ddIdiomaLibro.hidden = true;
+            }
+
+            // ---- Audiolibro ----
+            const linksAudioMap = normalizeLinksMap(b.links_audio);
+            let audioHtml = renderLangLinks(linksAudioMap);
+            if (!audioHtml && b.link_audio) {
+                audioHtml = `<a class="dl-link" href="${escapeHtml(b.link_audio)}"
+                                target="_blank" rel="noopener">Audio&nbsp;↗</a>`;
+            }
+            if (audioHtml) {
+                ddAudio.innerHTML = audioHtml;
+                dtAudio.hidden = false;
+                ddAudio.hidden = false;
+            } else {
+                dtAudio.hidden = true;
+                ddAudio.hidden = true;
+            }
+
+            // ---- Idioma del audiolibro (solo si hay audio) ----
+            const hasAudio = !!audioHtml;
+            const audioLangsCsv = hasAudio
+                ? (b.languages_audio
+                    || (Object.keys(linksAudioMap).length ? Object.keys(linksAudioMap).join(',') : ''))
+                : '';
+            const audioLangsHtml = audioLangsCsv ? renderLangPills(audioLangsCsv) : '';
+            if (audioLangsHtml) {
+                ddIdiomaAudio.innerHTML = audioLangsHtml;
+                dtIdiomaAudio.hidden = false;
+                ddIdiomaAudio.hidden = false;
+            } else {
+                dtIdiomaAudio.hidden = true;
+                ddIdiomaAudio.hidden = true;
+            }
+
+            // ---- Fragmento ----
+            if (b.fragment && b.fragment.trim()) {
+                // Conservamos saltos de párrafo
+                fragmentEl.innerHTML = b.fragment
+                    .split(/\n{2,}/)
+                    .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
+                    .join('');
+                contentEl.hidden = false;
+            } else {
+                contentEl.hidden = true;
+            }
+
+            // Modales — se enganchan una vez que tenemos el id del libro
+            setupReportModal(b.id);
+            setupVersionModal(b.id);
+
+            detailEl.hidden  = false;
+            setStatus(null);
+        } catch (err) {
+            console.error(err);
+            setStatus('No se pudo cargar el libro. Probá recargar la página.', true);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Modal de reporte
+    // -------------------------------------------------------------------------
+    function setupReportModal(bookId) {
+        const modal        = document.getElementById('reportModal');
+        const openBtn      = document.getElementById('openReportBtn');
+        const form         = document.getElementById('reportForm');
+        const textarea     = document.getElementById('reportText');
+        const submitBtn    = document.getElementById('reportSubmitBtn');
+        const statusMsgEl  = document.getElementById('reportStatus');
+
+        let lastFocus = null;
+
+        function open() {
+            lastFocus = document.activeElement;
+            modal.hidden = false;
+            document.body.classList.add('modal-open');
+            setTimeout(() => textarea.focus(), 40);
+        }
+        function close() {
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            resetStatus();
+            form.reset();
+            submitBtn.disabled = false;
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        function resetStatus() {
+            statusMsgEl.hidden = true;
+            statusMsgEl.textContent = '';
+            statusMsgEl.className = 'modal-status';
+        }
+        function showStatus(msg, kind) {
+            statusMsgEl.textContent = msg;
+            statusMsgEl.className = 'modal-status ' + (kind || '');
+            statusMsgEl.hidden = false;
+        }
+
+        openBtn.addEventListener('click', open);
+
+        // Cerrar: click en backdrop, en botones con data-close, o ESC
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = textarea.value.trim();
+            if (message.length < 5) {
+                showStatus('El mensaje es muy corto.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando…';
+            resetStatus();
+
+            try {
+                const res = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ book_id: bookId, message })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                showStatus('Reporte enviado. Gracias.', 'ok');
+                setTimeout(close, 1500);
+            } catch (err) {
+                console.error(err);
+                showStatus('No se pudo enviar. Probá de nuevo.', 'error');
+                submitBtn.disabled = false;
+            } finally {
+                submitBtn.textContent = 'Enviar reporte';
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Modal: aportar versión/idioma u observación (POST /api/contributions/version)
+    // Tiene dos modos: "version" (formato+idioma+url+notas) y "note" (sólo notas).
+    // -------------------------------------------------------------------------
+    function setupVersionModal(bookId) {
+        const modal       = document.getElementById('versionModal');
+        const openBtn     = document.getElementById('openVersionBtn');
+        const form        = document.getElementById('versionForm');
+        const kindEl      = document.getElementById('versionKind');
+        const langEl      = document.getElementById('versionLang');
+        const urlEl       = document.getElementById('versionUrl');
+        const notesEl     = document.getElementById('versionNotes');
+        const notesLabel  = document.getElementById('versionNotesLabel');
+        const submitBtn   = document.getElementById('versionSubmitBtn');
+        const statusMsgEl = document.getElementById('versionStatus');
+        const versionFields = document.getElementById('versionFields');
+        const modeRadios  = form.querySelectorAll('input[name="mode"]');
+
+        let lastFocus = null;
+        let langsPopulated = false;
+
+        // Llenar el <select> de idiomas a partir de /api/languages.
+        // Reusamos LANG_NAMES si ya está poblado.
+        async function populateLangs() {
+            if (langsPopulated) return;
+            const cached = Object.entries(LANG_NAMES);
+            let langs = cached.length
+                ? cached.map(([slug, name]) => ({ slug, name }))
+                : [];
+            if (langs.length === 0) {
+                try {
+                    const res = await fetch('/api/languages');
+                    if (res.ok) langs = await res.json();
+                } catch (_) { /* nada */ }
+            }
+            langs.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.slug;
+                opt.textContent = cap(l.name || l.slug);
+                langEl.appendChild(opt);
+            });
+            langsPopulated = true;
+        }
+
+        function getMode() {
+            const checked = form.querySelector('input[name="mode"]:checked');
+            return checked ? checked.value : 'version';
+        }
+
+        // Aplica el modo: muestra/oculta los campos de versión y marca
+        // las notas como obligatorias o no.
+        function applyMode() {
+            const mode = getMode();
+            const isVersion = mode === 'version';
+            versionFields.hidden = !isVersion;
+            // Sólo el bloque visible debe pelear con la validación nativa.
+            kindEl.required = isVersion;
+            langEl.required = isVersion;
+            if (isVersion) {
+                notesLabel.textContent = 'Notas (opcional)';
+                notesEl.required = false;
+                notesEl.placeholder = 'Editorial, año, calidad de la traducción, narrador, etc.';
+            } else {
+                notesLabel.textContent = 'Tu observación';
+                notesEl.required = true;
+                notesEl.placeholder = 'Ej: el año está mal, el autor se escribe distinto, falta una colección…';
+            }
+        }
+
+        function open() {
+            lastFocus = document.activeElement;
+            populateLangs();
+            applyMode();
+            modal.hidden = false;
+            document.body.classList.add('modal-open');
+            setTimeout(() => {
+                if (getMode() === 'version') kindEl.focus();
+                else                          notesEl.focus();
+            }, 40);
+        }
+        function close() {
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            resetStatus();
+            form.reset();
+            applyMode();
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enviar aporte';
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        function resetStatus() {
+            statusMsgEl.hidden = true;
+            statusMsgEl.textContent = '';
+            statusMsgEl.className = 'modal-status';
+        }
+        function showStatus(msg, kind) {
+            statusMsgEl.textContent = msg;
+            statusMsgEl.className = 'modal-status ' + (kind || '');
+            statusMsgEl.hidden = false;
+        }
+
+        openBtn.addEventListener('click', open);
+        modeRadios.forEach(r => r.addEventListener('change', applyMode));
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mode     = getMode();
+            const kind     = kindEl.value;
+            const language = langEl.value;
+            const url      = urlEl.value.trim();
+            const notes    = notesEl.value.trim();
+
+            if (mode === 'version') {
+                if (!language) {
+                    showStatus('Elegí un idioma.', 'error');
+                    return;
+                }
+            } else {
+                if (notes.length < 5) {
+                    showStatus('Escribí un poco más para que podamos entender la observación.', 'error');
+                    return;
+                }
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando…';
+            resetStatus();
+
+            const payload = (mode === 'version')
+                ? { book_id: bookId, mode,
+                    kind, language,
+                    download_url: url || null,
+                    notes: notes || null }
+                : { book_id: bookId, mode,
+                    notes: notes };
+
+            try {
+                const res = await fetch('/api/contributions/version', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    let msg = 'No se pudo enviar.';
+                    try {
+                        const data = await res.json();
+                        if (data && data.error) msg = data.error;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
+                showStatus('Aporte enviado. Pasa a la cola de moderación.', 'ok');
+                setTimeout(close, 1800);
+            } catch (err) {
+                console.error(err);
+                showStatus(err.message || 'No se pudo enviar.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar aporte';
+            }
+        });
+    }
+
+    loadBook();
+</script>
+</body>
+</html>
