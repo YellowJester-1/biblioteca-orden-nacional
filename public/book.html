@@ -63,6 +63,11 @@
                     <span class="report-link-icon">+</span>
                     <span>Aportar versión / idioma faltante</span>
                 </button>
+                <button type="button" class="report-link report-link-download" id="downloadJsonBtn"
+                        title="Descarga un archivo .json con todos los datos de este libro">
+                    <span class="report-link-icon">⬇</span>
+                    <span>Descargar datos (JSON)</span>
+                </button>
             </div>
         </div>
     </article>
@@ -404,6 +409,7 @@
             // Modales — se enganchan una vez que tenemos el id del libro
             setupReportModal(b.id);
             setupVersionModal(b.id);
+            setupJsonDownload(b);
 
             detailEl.hidden  = false;
             setStatus(null);
@@ -411,6 +417,42 @@
             console.error(err);
             setStatus('No se pudo cargar el libro. Probá recargar la página.', true);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Descarga JSON con todos los datos del libro.
+    // Genera el archivo en el navegador (sin endpoint dedicado): construye
+    // un Blob con el objeto y dispara la descarga vía un <a> temporal.
+    // -------------------------------------------------------------------------
+    function setupJsonDownload(book) {
+        const btn = document.getElementById('downloadJsonBtn');
+        if (!btn) return;
+
+        // Slug minimalista para el nombre de archivo: minúsculas, sin acentos,
+        // sin caracteres raros. Mantiene letras, números y guiones.
+        function slugify(s) {
+            return String(s || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '')
+                .slice(0, 60) || 'libro';
+        }
+
+        btn.addEventListener('click', () => {
+            const payload = JSON.stringify(book, null, 2);
+            const blob    = new Blob([payload], { type: 'application/json;charset=utf-8' });
+            const url     = URL.createObjectURL(blob);
+            const a       = document.createElement('a');
+            a.href     = url;
+            a.download = `${slugify(book.title)}-${slugify(book.author)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            // Liberamos el objectURL después del click; algunos navegadores
+            // requieren un tick para que el download arranque.
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
     }
 
     // -------------------------------------------------------------------------
